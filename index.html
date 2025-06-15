@@ -56,6 +56,13 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.9); } }
         .item-fade-out { animation: fadeOut 0.3s ease-out forwards; }
+        
+        /* Drag-and-drop stilleri */
+        .draggable { cursor: grab; }
+        .draggable:active { cursor: grabbing; }
+        .dragging { opacity: 0.5; border: 2px dashed #a78bfa; }
+        .drag-over { border-top: 2px solid #a78bfa; }
+
     </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-slate-200 transition-colors duration-300">
@@ -72,15 +79,7 @@
         <main id="main-content">
             <!-- Ana Sayfa Paneli -->
             <div id="panel-home" class="main-panel active space-y-8">
-                <div id="summary-panel" class="summary-card text-white p-6 rounded-2xl shadow-lg"></div>
-                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
-                    <h2 class="text-xl font-bold mb-4 dark:text-white">Aylık Ödeme Planınız</h2>
-                    <div id="payment-plan" class="overflow-x-auto"></div>
-                </div>
-                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
-                    <h2 class="text-xl font-bold mb-4 dark:text-white">Harcama Dağılımı</h2>
-                    <div class="max-w-sm mx-auto"><canvas id="categoryChart"></canvas></div>
-                </div>
+                <!-- Dashboard elemanları JavaScript ile render edilecek -->
             </div>
 
             <!-- Harcamalar Paneli -->
@@ -147,6 +146,31 @@
                         <button data-theme="" class="w-10 h-10 rounded-full bg-violet-600 border-2 border-slate-400"></button>
                         <button data-theme="theme-blue" class="w-10 h-10 rounded-full bg-blue-600 border-2 border-slate-400"></button>
                         <button data-theme="theme-green" class="w-10 h-10 rounded-full bg-green-600 border-2 border-slate-400"></button>
+                     </div>
+                </div>
+                <!-- Bildirim Ayarları -->
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
+                    <h2 class="text-xl font-bold mb-4 dark:text-white">Hatırlatıcı Ayarları</h2>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <label for="statement-day-alert-toggle" class="font-medium text-white">Ekstre Kesim Günü Uyarısı</label>
+                            <input type="checkbox" id="statement-day-alert-toggle" class="toggle-checkbox">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <label for="due-date-alert-toggle" class="font-medium text-white">Son Ödeme Günü Hatırlatıcısı</label>
+                            <input type="checkbox" id="due-date-alert-toggle" class="toggle-checkbox">
+                        </div>
+                        <div id="due-date-alert-options" class="space-y-2 pl-4 border-l-2 border-slate-700 ml-2 hidden">
+                             <label for="alert-days-before" class="text-sm text-slate-400">Kaç gün önce hatırlatılsın?</label>
+                             <input type="number" id="alert-days-before" min="1" max="10" class="w-full px-3 py-2 border border-slate-600 rounded-md bg-slate-700">
+                        </div>
+                    </div>
+                </div>
+                <!-- Takvim Entegrasyonu -->
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
+                    <h2 class="text-xl font-bold mb-4 dark:text-white">Veri Araçları</h2>
+                     <div class="space-y-4">
+                        <button id="export-calendar-btn" class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 font-semibold transition-colors">Taksitleri Takvime Aktar (.ics)</button>
                      </div>
                 </div>
                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
@@ -226,13 +250,20 @@
             dayjs.extend(window.dayjs_plugin_customParseFormat);
 
             // --- DEĞİŞKENLER VE SABİTLER ---
-            const STORAGE_KEY = 'makTaksitAsistaniData_v4';
-            let appData = {
+            const STORAGE_KEY = 'makTaksitAsistaniData_v5';
+            const DEFAULTS = {
                 cards: [],
                 purchases: [],
                 paidMonths: {},
-                theme: ''
+                theme: '',
+                dashboardOrder: ['summary', 'plan', 'chart'],
+                notificationSettings: {
+                    statementDay: { enabled: true },
+                    dueDate: { enabled: true, daysBefore: 3 }
+                },
+                lastNotificationCheck: null
             };
+            let appData = {};
             const CATEGORIES = ['Gıda', 'Fatura', 'Ulaşım', 'Giyim', 'Eğlence', 'Sağlık', 'Ev Eşyası', 'Dijital Servis', 'Diğer'];
             let categoryChartInstance = null;
             let itemToDelete = {};
@@ -321,14 +352,21 @@
                 document.getElementById('cancel-edit-purchase-btn').addEventListener('click', closeEditPurchaseModal);
                 document.getElementById('edit-purchase-form').addEventListener('submit', handleEditPurchaseSubmit);
             }
-
             function closeEditPurchaseModal() { editPurchaseModal.style.display = 'none'; editPurchaseBackdrop.style.display = 'none'; }
+            
 
             // --- VERİ YÖNETİMİ & TEMA ---
             function loadData() {
-                const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
-                if (data) {
-                    appData = { ...appData, ...data };
+                const storedData = JSON.parse(localStorage.getItem(STORAGE_KEY));
+                appData = { ...DEFAULTS, ...storedData };
+                // Deep merge for nested objects to prevent corruption from older versions
+                if (storedData && storedData.notificationSettings) {
+                    appData.notificationSettings = {
+                        ...DEFAULTS.notificationSettings,
+                        ...storedData.notificationSettings,
+                        statementDay: { ...DEFAULTS.notificationSettings.statementDay, ...(storedData.notificationSettings.statementDay || {}) },
+                        dueDate: { ...DEFAULTS.notificationSettings.dueDate, ...(storedData.notificationSettings.dueDate || {}) }
+                    };
                 }
                 applyTheme(appData.theme);
             }
@@ -340,7 +378,6 @@
             function applyTheme(themeName) {
                 document.documentElement.className = `dark ${themeName || ''}`;
                 appData.theme = themeName;
-                saveData();
             }
             
             // --- ONBOARDING ---
@@ -353,18 +390,209 @@
                 }
             }
 
-            // --- ARAYÜZ OLUŞTURMA & GÜNCELLEME ---
-            function refreshUI() {
+            // --- BİLDİRİM VE UYARI SİSTEMİ ---
+            function checkAndShowNotifications() {
+                const today = dayjs().startOf('day');
+                const lastCheck = appData.lastNotificationCheck ? dayjs(appData.lastNotificationCheck) : null;
+                
+                if (lastCheck && lastCheck.isSame(today, 'day')) return;
+
+                const notifications = [];
+                const settings = appData.notificationSettings;
+
+                if (settings.statementDay.enabled) {
+                    appData.cards.forEach(card => {
+                        const statementDayOfMonth = parseInt(card.statementDay);
+                        if (today.date() === statementDayOfMonth - 1) {
+                            notifications.push(`🔔 ${card.cardName} kartınızın ekstresi yarın kesilecek.`);
+                        }
+                    });
+                }
+
+                if (settings.dueDate.enabled) {
+                    const payments = calculatePayments();
+                    if (!payments) return; 
+
+                    Object.keys(payments).forEach(monthKey => {
+                        const monthData = payments[monthKey];
+                        if (!monthData) return; 
+
+                        const cardPayments = { ...monthData };
+                        delete cardPayments.total;
+                        delete cardPayments.unpaidTotal;
+                        
+                        Object.keys(cardPayments).forEach(cardId => {
+                            const paymentKey = `${monthKey}_${cardId}`;
+                            if (appData.paidMonths[paymentKey]) return;
+
+                            const card = appData.cards.find(c => c.id === cardId);
+                            if (!card) return;
+
+                            const statementDate = dayjs(`${monthKey}-${String(card.statementDay).padStart(2, '0')}`);
+                            const dueDate = statementDate.add(10, 'days');
+                            const daysUntilDue = dueDate.diff(today, 'day');
+
+                            if (daysUntilDue === settings.dueDate.daysBefore) {
+                                notifications.push(`❗ ${card.cardName} kartınızın ${dueDate.format('DD.MM.YYYY')} tarihli son ödemesi yaklaşıyor.`);
+                            }
+                        });
+                    });
+                }
+                
+                if (notifications.length > 0) {
+                    showInfoModal(notifications.join('<br>'), 'Günün Hatırlatıcıları');
+                }
+                
+                appData.lastNotificationCheck = today.toISOString();
+                saveData();
+            }
+
+
+            // --- TAKVİM ENTEGRASYONU ---
+            function generateICSFile() {
+                let icsEvents = [];
+                const payments = calculatePayments();
+                if (!payments) {
+                    showInfoModal('Takvime eklenecek veri bulunamadı.', 'Bilgi');
+                    return;
+                }
+                const today = dayjs();
+
+                Object.keys(payments).forEach(monthKey => {
+                    const monthData = payments[monthKey];
+                    if (!monthData) return;
+
+                    const cardPayments = { ...monthData };
+                    delete cardPayments.total;
+                    delete cardPayments.unpaidTotal;
+
+                    Object.keys(cardPayments).forEach(cardId => {
+                        const paymentKey = `${monthKey}_${cardId}`;
+                        if (appData.paidMonths[paymentKey]) return; 
+
+                        const card = appData.cards.find(c => c.id === cardId);
+                        if (!card) return;
+
+                        const statementDate = dayjs(`${monthKey}-${String(card.statementDay).padStart(2, '0')}`);
+                        const dueDate = statementDate.add(10, 'days');
+
+                        if (dueDate.isBefore(today, 'day')) return;
+
+                        const event = [
+                            'BEGIN:VEVENT',
+                            `DTSTAMP:${dayjs().format('YYYYMMDDTHHmmss')}Z`,
+                            `UID:${paymentKey}@maktaksitasistani.com`,
+                            `DTSTART;VALUE=DATE:${dueDate.format('YYYYMMDD')}`,
+                            `DTEND;VALUE=DATE:${dueDate.add(1, 'day').format('YYYYMMDD')}`,
+                            `SUMMARY:Son Ödeme: ${card.cardName} - ${monthData[cardId].amount.toFixed(2)} TL`,
+                            `DESCRIPTION:MAK Taksit Asistanı tarafından oluşturulan hatırlatıcı.`,
+                            'END:VEVENT'
+                        ].join('\r\n');
+                        icsEvents.push(event);
+                    });
+                });
+
+                if (icsEvents.length === 0) {
+                    showInfoModal('Takvime eklenecek gelecek bir taksit bulunamadı.', 'Bilgi');
+                    return;
+                }
+
+                const icsFile = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//MAK Taksit Asistanı//TR', ...icsEvents, 'END:VCALENDAR'].join('\r\n');
+                const blob = new Blob([icsFile], { type: 'text/calendar;charset=utf-8' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'taksit-takvimi.ics';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+
+            // --- DASHBOARD (SÜRÜKLE-BIRAK) ---
+            function renderDashboard() {
+                const homePanel = document.getElementById('panel-home');
+                homePanel.innerHTML = ''; 
+
+                const components = {
+                    summary: '<div id="summary-panel" data-id="summary" draggable="true" class="summary-card text-white p-6 rounded-2xl shadow-lg draggable"></div>',
+                    plan: '<div data-id="plan" draggable="true" class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm draggable"><h2 class="text-xl font-bold mb-4 dark:text-white">Aylık Ödeme Planınız</h2><div id="payment-plan" class="overflow-x-auto"></div></div>',
+                    chart: '<div data-id="chart" draggable="true" class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm draggable"><h2 class="text-xl font-bold mb-4 dark:text-white">Harcama Dağılımı</h2><div class="max-w-sm mx-auto"><canvas id="categoryChart"></canvas></div></div>'
+                };
+
+                appData.dashboardOrder.forEach(key => {
+                    if(components[key]) homePanel.insertAdjacentHTML('beforeend', components[key]);
+                });
+
                 renderSummary();
                 renderPaymentPlan();
                 renderCategoryChart();
+            }
+
+            function addDragAndDropListeners() {
+                const homePanel = document.getElementById('panel-home');
+                let draggedItem = null;
+
+                homePanel.addEventListener('dragstart', e => {
+                    if (e.target.classList.contains('draggable')) {
+                        draggedItem = e.target;
+                        setTimeout(() => { e.target.classList.add('dragging'); }, 0);
+                    }
+                });
+                homePanel.addEventListener('dragend', e => {
+                    if (draggedItem) {
+                        draggedItem.classList.remove('dragging');
+                        draggedItem = null;
+                        const newOrder = [...homePanel.querySelectorAll('.draggable')].map(item => item.dataset.id);
+                        appData.dashboardOrder = newOrder;
+                        saveData();
+                    }
+                });
+                homePanel.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    const afterElement = getDragAfterElement(homePanel, e.clientY);
+                    const draggable = document.querySelector('.dragging');
+                    if (draggable) {
+                       if (afterElement == null) { homePanel.appendChild(draggable); } 
+                       else { homePanel.insertBefore(draggable, afterElement); }
+                    }
+                });
+            }
+            function getDragAfterElement(container, y) {
+                const draggableElements = [...container.querySelectorAll('.draggable:not(.dragging)')];
+                return draggableElements.reduce((closest, child) => {
+                    const box = child.getBoundingClientRect();
+                    const offset = y - box.top - box.height / 2;
+                    if (offset < 0 && offset > closest.offset) {
+                        return { offset: offset, element: child };
+                    } else {
+                        return closest;
+                    }
+                }, { offset: Number.NEGATIVE_INFINITY }).element;
+            }
+
+            // --- ARAYÜZ OLUŞTURMA & GÜNCELLEME ---
+            function refreshUI() {
+                renderDashboard();
                 renderCards();
                 renderPurchasesList();
                 renderSubscriptions();
                 updateCardSelects();
                 populateCategorySelects();
+                updateNotificationSettingsUI();
             }
             
+            function renderCards() { /* Önceki versiyon ile aynı */ }
+            function renderPurchasesList() { /* Önceki versiyon ile aynı */ }
+            function renderSubscriptions() { /* Önceki versiyon ile aynı */ }
+            function exportReportAsPDF(startDate, endDate, filteredPurchases) { /* Önceki versiyon ile aynı, font düzeltmesi dahil */ }
+            function updateCardSelects() { /* Önceki versiyon ile aynı */ }
+            function populateCategorySelects() { /* Önceki versiyon ile aynı */ }
+            function calculatePayments() { /* Önceki versiyon ile aynı */ }
+            function renderPaymentPlan() { /* Önceki versiyon ile aynı */ }
+            function renderCategoryChart() { /* Önceki versiyon ile aynı */ }
+            function renderSummary() { /* Önceki versiyon ile aynı */ }
+            
+            // Tam fonksiyon gövdeleri
             function renderCards() {
                 const cardListEl = document.getElementById('card-list');
                 if (!cardListEl) return;
@@ -379,7 +607,6 @@
                     cardListEl.appendChild(el);
                 });
             }
-
             function renderPurchasesList() {
                 const listEl = document.getElementById('purchase-list-details');
                 if (!listEl) return;
@@ -403,7 +630,6 @@
                     listEl.appendChild(el);
                 });
             }
-
             function renderSubscriptions() {
                 const listEl = document.getElementById('subscription-list');
                 if (!listEl) return;
@@ -421,72 +647,37 @@
                     const el = document.createElement('div');
                     el.className = 'flex justify-between items-center bg-slate-700 p-4 rounded-lg border border-slate-600';
                     el.style.animation = 'fadeIn 0.5s';
-                    el.innerHTML = `
-                        <div>
-                            <p class="font-semibold text-white">${p.purchaseName}</p>
-                            <p class="text-sm text-slate-300">${p.category || 'Diğer'}</p>
-                            <p class="text-xs text-slate-400">Kart: ${card ? card.cardName : 'Bilinmeyen'}</p>
-                        </div>
-                        <div class="text-right">
-                             <p class="font-semibold text-lg text-white">${monthlyCost.toFixed(2)} ₺</p>
-                             <p class="text-xs text-slate-400">aylık</p>
-                        </div>`;
+                    el.innerHTML = `<div><p class="font-semibold text-white">${p.purchaseName}</p><p class="text-sm text-slate-300">${p.category || 'Diğer'}</p><p class="text-xs text-slate-400">Kart: ${card ? card.cardName : 'Bilinmeyen'}</p></div><div class="text-right"><p class="font-semibold text-lg text-white">${monthlyCost.toFixed(2)} ₺</p><p class="text-xs text-slate-400">aylık</p></div>`;
                     listEl.appendChild(el);
                 });
                 const summaryEl = document.createElement('div');
                 summaryEl.className = 'mt-6 pt-4 border-t border-slate-700 text-right';
-                summaryEl.innerHTML = `
-                    <p class="text-sm text-slate-300">Aylık Toplam Abonelik Gideri</p>
-                    <p class="font-bold text-2xl text-white">${monthlyTotal.toFixed(2)} ₺</p>
-                `;
+                summaryEl.innerHTML = `<p class="text-sm text-slate-300">Aylık Toplam Abonelik Gideri</p><p class="font-bold text-2xl text-white">${monthlyTotal.toFixed(2)} ₺</p>`;
                 listEl.appendChild(summaryEl);
             }
-
             function exportReportAsPDF(startDate, endDate, filteredPurchases) {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
-                
-                // FIX: Removed custom font loading which causes errors. Using standard Helvetica font.
                 doc.setFont('Helvetica', 'normal');
-
                 doc.setFontSize(18);
                 doc.text("Harcama Raporu", 14, 22);
                 doc.setFontSize(11);
                 doc.text(`Tarih Araligi: ${dayjs(startDate).format('DD.MM.YYYY')} - ${dayjs(endDate).format('DD.MM.YYYY')}`, 14, 30);
-
                 const tableColumn = ["Tarih", "Aciklama", "Kategori", "Kart", "Tutar (TL)"];
                 const tableRows = [];
                 let totalAmount = 0;
-
                 filteredPurchases.forEach(p => {
                     const card = appData.cards.find(c => c.id === p.cardId);
-                    tableRows.push([
-                        dayjs(p.purchaseDate).format('DD.MM.YYYY'),
-                        p.purchaseName,
-                        p.category,
-                        card ? card.cardName : 'Bilinmiyor',
-                        parseFloat(p.totalAmount).toFixed(2)
-                    ]);
+                    tableRows.push([ dayjs(p.purchaseDate).format('DD.MM.YYYY'), p.purchaseName, p.category, card ? card.cardName : 'Bilinmiyor', parseFloat(p.totalAmount).toFixed(2) ]);
                     totalAmount += parseFloat(p.totalAmount);
                 });
-
-                doc.autoTable({
-                    head: [tableColumn],
-                    body: tableRows,
-                    startY: 35,
-                    theme: 'grid',
-                    headStyles: { fillColor: [109, 40, 217] },
-                    // FIX: Use standard font in table styles as well.
-                    styles: { font: 'Helvetica', fontStyle: 'normal' },
-                });
-                
+                doc.autoTable({ head: [tableColumn], body: tableRows, startY: 35, theme: 'grid', headStyles: { fillColor: [109, 40, 217] }, styles: { font: 'Helvetica', fontStyle: 'normal' }, });
                 const finalY = doc.lastAutoTable.finalY || 50;
                 doc.setFontSize(12);
                 doc.text(`Toplam Harcama: ${totalAmount.toFixed(2)} TL`, 14, finalY + 15);
                 doc.save(`harcama-raporu-${dayjs().format('YYYY-MM-DD')}.pdf`);
                 showInfoModal('Raporunuz başarıyla PDF olarak indirildi.', 'Başarılı', 'success');
             }
-            
             function updateCardSelects() {
                 const selects = document.querySelectorAll('#card-select, #edit-card-select');
                 selects.forEach(select => {
@@ -499,7 +690,6 @@
                     }
                 });
             }
-
             function populateCategorySelects() {
                 const selects = document.querySelectorAll('#purchase-category, #edit-purchase-category, #filter-category');
                 selects.forEach(select => {
@@ -509,7 +699,6 @@
                     CATEGORIES.forEach(cat => select.add(new Option(cat, cat)));
                 });
             }
-
             function calculatePayments() {
                 const payments = {};
                 appData.purchases.forEach(p => {
@@ -528,7 +717,6 @@
                 });
                 return payments;
             }
-
             function renderPaymentPlan() {
                  const el = document.getElementById('payment-plan');
                  if (!el) return;
@@ -572,7 +760,6 @@
                  table += '</tbody></table>';
                  el.innerHTML = table;
             }
-
             function renderCategoryChart() {
                 const ctx = document.getElementById('categoryChart')?.getContext('2d');
                 if (!ctx) return;
@@ -591,7 +778,6 @@
                     options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: '#e2e8f0' } } } }
                 });
             }
-
             function renderSummary() {
                 const summaryPanel = document.getElementById('summary-panel');
                 if (!summaryPanel) return;
@@ -617,6 +803,15 @@
                     }
                 });
                 summaryPanel.innerHTML = `<h2 class="text-xl font-bold mb-4">Durum Özeti</h2><div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center"><div><p class="text-sm opacity-80">Bu Ay Kalan Ödeme</p><p class="text-2xl font-bold">${thisMonthPayment.toFixed(2)} ₺</p></div><div><p class="text-sm opacity-80">En Yakın Son Ödeme</p><p class="text-2xl font-bold">${nextDueDateInfo ? nextDueDateInfo.date.format('DD.MM.YYYY') : '-'}</p><p class="text-xs opacity-80">${nextDueDateInfo ? nextDueDateInfo.cardName : ''}</p></div><div><p class="text-sm opacity-80">Toplam Kalan Borç</p><p class="text-2xl font-bold">${totalDebt.toFixed(2)} ₺</p></div></div>`;
+            }
+
+            function updateNotificationSettingsUI() {
+                const settings = appData.notificationSettings;
+                document.getElementById('statement-day-alert-toggle').checked = settings.statementDay.enabled;
+                document.getElementById('due-date-alert-toggle').checked = settings.dueDate.enabled;
+                document.getElementById('alert-days-before').value = settings.dueDate.daysBefore;
+                const optionsDiv = document.getElementById('due-date-alert-options');
+                optionsDiv.style.display = settings.dueDate.enabled ? 'block' : 'none';
             }
             
             // --- OLAY İŞLEYİCİLER ---
@@ -650,10 +845,11 @@
                     document.querySelectorAll('.bottom-nav-btn').forEach(btn => btn.classList.remove('active', 'bg-slate-700', 'text-violet-400'));
                     clickedBtn.classList.add('active', 'bg-slate-700', 'text-violet-400');
                     document.querySelectorAll('.main-panel').forEach(panel => panel.classList.remove('active'));
-                    document.getElementById(`panel-${clickedBtn.dataset.panel}`).classList.add('active');
+                    const panelId = `panel-${clickedBtn.dataset.panel}`;
+                    document.getElementById(panelId).classList.add('active');
                 });
                 
-                // Formlar ve Filtreler (Event Delegation)
+                // Formlar ve Filtreler
                 document.body.addEventListener('submit', e => {
                     if (e.target.id === 'add-card-form') {
                          e.preventDefault(); 
@@ -674,15 +870,15 @@
                 });
 
                 document.body.addEventListener('input', e => {
-                    if (e.target.id === 'search-input') {
-                        renderPurchasesList();
+                    if (e.target.id === 'search-input') renderPurchasesList();
+                    if (e.target.id === 'alert-days-before') {
+                        appData.notificationSettings.dueDate.daysBefore = parseInt(e.target.value) || 3;
+                        saveData();
                     }
                 });
                  document.body.addEventListener('change', e => {
-                    if (e.target.id === 'filter-category') {
-                        renderPurchasesList();
-                    }
-                     if (e.target.id === 'import-data-input') {
+                    if (e.target.id === 'filter-category') renderPurchasesList();
+                    if (e.target.id === 'import-data-input') {
                         const file = e.target.files[0];
                         if (!file) return;
                         const reader = new FileReader();
@@ -691,6 +887,7 @@
                                 const importedData = JSON.parse(re.target.result);
                                 if (importedData && typeof importedData === 'object') {
                                     showConfirmModal('Mevcut tüm verileriniz bu yedekle değiştirilecek. Onaylıyor musunuz?', 'Veri Geri Yükleme', () => {
+                                        loadData(); // Load defaults before merging
                                         appData = { ...appData, ...importedData };
                                         saveData();
                                         refreshUI();
@@ -701,32 +898,33 @@
                         };
                         reader.readAsText(file);
                         e.target.value = '';
+                     }
+                    if (e.target.id === 'statement-day-alert-toggle') {
+                        appData.notificationSettings.statementDay.enabled = e.target.checked;
+                        saveData();
+                    }
+                    if (e.target.id === 'due-date-alert-toggle') {
+                        appData.notificationSettings.dueDate.enabled = e.target.checked;
+                        document.getElementById('due-date-alert-options').style.display = e.target.checked ? 'block' : 'none';
+                        saveData();
                     }
                 });
                 
-                // Statik Butonlar ve Dinamik İçerik (Event Delegation)
+                // Diğer Butonlar
                 document.body.addEventListener('click', e => {
                     const btn = e.target.closest('button');
                     if (!btn) return;
-
-                    // Tema
-                    if (btn.closest('#theme-selector')) {
-                        if (btn.dataset.theme !== undefined) applyTheme(btn.dataset.theme);
-                        return;
-                    }
-                    // Rapor
+                    if (btn.closest('#theme-selector')) { if (btn.dataset.theme !== undefined) applyTheme(btn.dataset.theme); return; }
                     if (btn.id === 'generate-report-btn') {
                         const startDateEl = document.getElementById('start-date');
                         const endDateEl = document.getElementById('end-date');
                         const startDate = startDateEl ? startDateEl.value : null;
                         const endDate = endDateEl ? endDateEl.value : null;
-
                         if (!startDate || !endDate) { showInfoModal('Lütfen tarih aralığı seçin.', 'Uyarı', 'error'); return; }
                         const filtered = appData.purchases.filter(p => dayjs(p.purchaseDate).isAfter(dayjs(startDate).subtract(1, 'day')) && dayjs(p.purchaseDate).isBefore(dayjs(endDate).add(1, 'day')));
                         const outputEl = document.getElementById('report-output');
                         if(!outputEl) return;
                         if(filtered.length === 0){ outputEl.innerHTML = '<p class="text-center text-slate-400">Raporlanacak veri bulunamadı.</p>'; return; }
-                        
                         let total = 0; let reportHTML = '<div class="space-y-4">';
                         filtered.forEach(p => { 
                             const card = appData.cards.find(c => c.id === p.cardId);
@@ -745,7 +943,6 @@
                         exportReportAsPDF(startDate, endDate, filtered);
                         return;
                     }
-                     // Veri Yönetimi
                     if (btn.id === 'export-data-btn') {
                         const dataStr = JSON.stringify(appData);
                         const blob = new Blob([dataStr], {type: "application/json"});
@@ -758,9 +955,8 @@
                         showInfoModal('Veriler başarıyla yedeklendi.', 'Başarılı', 'success');
                         return;
                     }
-
-
-                    // Liste Elemanı Butonları
+                    if (btn.id === 'export-calendar-btn') { generateICSFile(); return; }
+                    
                     const id = btn.dataset.id;
                     const key = btn.dataset.key;
                     if (btn.matches('.delete-card-btn')) { openDeleteModal(id, 'card', appData.cards.find(c=>c.id===id).cardName, btn.closest('.bg-slate-700')); }
@@ -769,8 +965,6 @@
                     if (btn.matches('.edit-purchase-btn')) { openEditPurchaseModal(id); }
                     if (btn.matches('.pay-btn')) { appData.paidMonths[key] = true; saveData(); refreshUI(); }
                     if (btn.matches('.undo-pay-btn')) { delete appData.paidMonths[key]; saveData(); refreshUI(); }
-
-                    // Modal Butonları
                     if (btn.id === 'cancel-delete-btn') closeDeleteModal();
                     if (btn.id === 'confirm-delete-btn') {
                         if(itemToDelete.element) { itemToDelete.element.classList.add('item-fade-out'); }
@@ -788,22 +982,17 @@
                         }, 300);
                     }
                 });
+
+                addDragAndDropListeners();
             }
 
             // --- BAŞLANGIÇ ---
             function init() {
-                // Hata veren Service Worker kaydı kaldırıldı.
-                // if ('serviceWorker' in navigator) {
-                //     window.addEventListener('load', () => {
-                //         navigator.serviceWorker.register('/sw.js')
-                //             .then(reg => console.log('SW registered.', reg))
-                //             .catch(err => console.error('SW registration failed:', err));
-                //     });
-                // }
                 loadData();
                 refreshUI();
                 bindEventListeners();
                 checkOnboarding();
+                checkAndShowNotifications();
             }
 
             init();
