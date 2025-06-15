@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tr" class="">
+<html lang="tr" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -30,40 +30,90 @@
             max-height: 90vh; overflow-y: auto;
         }
         .sticky-header th { position: sticky; top: 0; z-index: 10; }
+        .tab-btn.active {
+            border-color: #6d28d9;
+            color: #6d28d9;
+        }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
     </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-slate-200 transition-colors duration-300">
 
     <div id="app-container" class="container mx-auto p-4 md:p-8 max-w-7xl">
 
-        <header class="mb-8 flex justify-between items-center">
+        <header class="mb-8">
              <div>
                 <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">MAK Taksit Asistanı</h1>
                 <p class="text-gray-600 dark:text-slate-400 mt-2">Hoşgeldin Muhammed!</p>
             </div>
-            <div class="flex items-center">
-                 <span class="text-sm text-gray-500 dark:text-slate-400 mr-2">Mod</span>
-                <button id="dark-mode-toggle" class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors bg-gray-200 dark:bg-violet-600">
-                    <span class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform translate-x-1 dark:translate-x-6"></span>
-                </button>
-            </div>
         </header>
         
+        <!-- Sekme Navigasyonu -->
+        <div class="mb-6 border-b border-gray-200 dark:border-slate-700">
+            <nav id="tabs" class="-mb-px flex space-x-8" aria-label="Tabs">
+                <button data-tab="home" class="tab-btn active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Ana Sayfa
+                </button>
+                <button data-tab="settings" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-slate-400 dark:hover:text-slate-300 dark:hover:border-slate-600">
+                    Ayarlar
+                </button>
+            </nav>
+        </div>
+
         <main id="main-content">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Sol Taraf -->
-                <div class="lg:col-span-1 space-y-8">
-                     <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
-                        <h2 class="text-xl font-bold mb-4 dark:text-white">Yeni Harcama Ekle</h2>
-                        <form id="add-purchase-form" class="space-y-4">
-                           <input type="text" id="purchase-name" placeholder="Harcama Açıklaması" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
-                           <select id="purchase-category" class="mt-1 block w-full pl-3 pr-10 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required></select>
-                           <input type="date" id="purchase-date" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
-                           <input type="number" id="total-amount" step="0.01" placeholder="Toplam Tutar (₺)" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
-                           <input type="number" id="installments-count" min="1" placeholder="Taksit Sayısı" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
-                           <select id="card-select" class="mt-1 block w-full pl-3 pr-10 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required><option value="">Kart Seçin</option></select>
-                           <button type="submit" class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 font-semibold">Harcamayı Ekle</button>
+            <!-- Ana Sayfa Paneli -->
+            <div id="tab-panel-home" class="tab-panel active">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Sol Taraf -->
+                    <div class="lg:col-span-1 space-y-8">
+                        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
+                            <h2 class="text-xl font-bold mb-4 dark:text-white">Yeni Harcama Ekle</h2>
+                            <form id="add-purchase-form" class="space-y-4">
+                               <input type="text" id="purchase-name" placeholder="Harcama Açıklaması" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
+                               <select id="purchase-category" class="mt-1 block w-full pl-3 pr-10 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required></select>
+                               <input type="date" id="purchase-date" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
+                               <input type="number" id="total-amount" step="0.01" placeholder="Toplam Tutar (₺)" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
+                               <input type="number" id="installments-count" min="1" placeholder="Taksit Sayısı" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
+                               <select id="card-select" class="mt-1 block w-full pl-3 pr-10 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required><option value="">Kart Seçin</option></select>
+                               <button type="submit" class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 font-semibold">Harcamayı Ekle</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Sağ Taraf -->
+                    <div class="lg:col-span-2 space-y-8">
+                        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
+                            <h2 class="text-xl font-bold mb-4 dark:text-white">Aylık Ödeme Planınız</h2>
+                            <div id="payment-plan" class="overflow-x-auto"></div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
+                            <h2 class="text-xl font-bold mb-4 dark:text-white">Harcama Dağılımı</h2>
+                            <div class="max-w-sm mx-auto">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
+                            <h2 class="text-xl font-bold mb-4 dark:text-white">Kayıtlı Harcamalarınız</h2>
+                            <div id="purchase-list-details" class="space-y-4"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ayarlar Paneli -->
+            <div id="tab-panel-settings" class="tab-panel">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
+                        <h2 class="text-xl font-bold mb-4 dark:text-white">Kartlarınızı Yönetin</h2>
+                        <form id="add-card-form" class="space-y-4">
+                            <input type="text" id="card-name" placeholder="Kart Adı" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
+                            <input type="number" id="statement-day" min="1" max="31" placeholder="Ekstre Kesim Günü" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
+                            <input type="number" id="card-limit" min="0" placeholder="Kart Limiti (₺)" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
+                            <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 font-semibold">Kart Ekle</button>
                         </form>
+                        <div id="card-list" class="mt-6 space-y-3"></div>
                     </div>
                     <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
                         <h2 class="text-xl font-bold mb-4 dark:text-white">Veri Yönetimi</h2>
@@ -75,34 +125,6 @@
                             </div>
                             <p class="text-xs text-gray-500 dark:text-slate-400">Verilerinizi bir dosyaya yedekleyebilir veya yedekten geri yükleyebilirsiniz. İçe aktarma işlemi mevcut verilerinizin üzerine yazacaktır.</p>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Sağ Taraf -->
-                <div class="lg:col-span-2 space-y-8">
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
-                        <h2 class="text-xl font-bold mb-4 dark:text-white">Aylık Ödeme Planınız</h2>
-                        <div id="payment-plan" class="overflow-x-auto"></div>
-                    </div>
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
-                        <h2 class="text-xl font-bold mb-4 dark:text-white">Harcama Dağılımı</h2>
-                        <div class="max-w-sm mx-auto">
-                            <canvas id="categoryChart"></canvas>
-                        </div>
-                    </div>
-                     <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
-                        <h2 class="text-xl font-bold mb-4 dark:text-white">Kartlarınızı Yönetin</h2>
-                        <form id="add-card-form" class="space-y-4">
-                            <input type="text" id="card-name" placeholder="Kart Adı" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
-                            <input type="number" id="statement-day" min="1" max="31" placeholder="Ekstre Kesim Günü" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
-                            <input type="number" id="card-limit" min="0" placeholder="Kart Limiti (₺)" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
-                            <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 font-semibold">Kart Ekle</button>
-                        </form>
-                        <div id="card-list" class="mt-6 space-y-3"></div>
-                    </div>
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
-                        <h2 class="text-xl font-bold mb-4 dark:text-white">Kayıtlı Harcamalarınız</h2>
-                        <div id="purchase-list-details" class="space-y-4"></div>
                     </div>
                 </div>
             </div>
@@ -139,27 +161,9 @@
             dayjs.extend(window.dayjs_plugin_customParseFormat);
 
             const STORAGE_KEY = 'makTaksitAsistaniData';
-            let cards = [], purchases = [], paidMonths = {}, settings = { darkMode: false };
+            let cards = [], purchases = [], paidMonths = {};
             const CATEGORIES = ['Gıda', 'Fatura', 'Ulaşım', 'Giyim', 'Eğlence', 'Sağlık', 'Ev Eşyası', 'Diğer'];
             let categoryChartInstance = null;
-            
-            // --- Ayarlar ve Modlar ---
-            const darkModeToggle = document.getElementById('dark-mode-toggle');
-            
-            function applyDarkMode(isDark) {
-                settings.darkMode = isDark;
-                document.documentElement.classList.toggle('dark', isDark);
-
-                // Grafik varsa, renkleri güncellemek için yeniden çiz
-                if (categoryChartInstance) {
-                    renderCategoryChart();
-                }
-            }
-
-            darkModeToggle.addEventListener('click', () => {
-                applyDarkMode(!settings.darkMode);
-                saveData();
-            });
 
             // --- Veri Yönetimi ---
             function loadData() {
@@ -167,12 +171,10 @@
                 cards = data?.cards || [];
                 purchases = data?.purchases || [];
                 paidMonths = data?.paidMonths || {};
-                settings = data?.settings || { darkMode: false };
-                applyDarkMode(settings.darkMode);
             }
 
             function saveData() {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify({ cards, purchases, paidMonths, settings }));
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({ cards, purchases, paidMonths }));
             }
             
             function refreshUI() {
@@ -183,6 +185,34 @@
                 renderPaymentPlan();
                 renderCategoryChart();
             }
+
+            // --- Sekme Yönetimi ---
+            const tabsContainer = document.getElementById('tabs');
+            const tabPanels = document.querySelectorAll('.tab-panel');
+
+            tabsContainer.addEventListener('click', (e) => {
+                const clickedTab = e.target.closest('.tab-btn');
+                if (!clickedTab) return;
+
+                // Tüm tablardan 'active' stilini kaldır
+                tabsContainer.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.remove('active', 'text-indigo-600', 'border-indigo-500');
+                    btn.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300', 'dark:text-slate-400', 'dark:hover:text-slate-300', 'dark:hover:border-slate-600');
+                });
+                // Tıklanan taba 'active' stilini ekle
+                clickedTab.classList.add('active', 'text-indigo-600', 'border-indigo-500');
+                clickedTab.classList.remove('text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300', 'dark:text-slate-400', 'dark:hover:text-slate-300', 'dark:hover:border-slate-600');
+                
+                // Tüm panelleri gizle
+                tabPanels.forEach(panel => {
+                    panel.classList.remove('active');
+                });
+
+                // İlgili paneli göster
+                const tabName = clickedTab.dataset.tab;
+                document.getElementById(`tab-panel-${tabName}`).classList.add('active');
+            });
+
 
             // --- Kategori Fonksiyonları ---
             function populateCategorySelects() {
@@ -215,7 +245,7 @@
                 if (labels.length === 0) {
                     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
                     ctx.font = "16px Inter";
-                    ctx.fillStyle = settings.darkMode ? '#94a3b8' : '#64748b';
+                    ctx.fillStyle = '#94a3b8'; // Dark mode text color
                     ctx.textAlign = "center";
                     ctx.fillText("Gösterilecek harcama verisi yok.", ctx.canvas.width / 2, ctx.canvas.height / 2);
                     return;
@@ -229,7 +259,7 @@
                             label: 'Harcama Dağılımı',
                             data: data,
                             backgroundColor: ['#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef'],
-                            borderColor: settings.darkMode ? '#1f2937' : '#f9fafb',
+                            borderColor: '#1f2937', // Dark mode background
                             borderWidth: 2
                         }]
                     },
@@ -238,7 +268,7 @@
                         plugins: {
                             legend: {
                                 position: 'top',
-                                labels: { color: settings.darkMode ? '#e2e8f0' : '#334155' }
+                                labels: { color: '#e2e8f0' } // Dark mode labels
                             }
                         }
                     }
@@ -294,13 +324,13 @@
 
             function renderCards() {
                 const cardListEl = document.getElementById('card-list');
-                cardListEl.innerHTML = cards.length === 0 ? '<p class="text-sm text-gray-500 dark:text-slate-400">Henüz kart eklemediniz.</p>' : '';
+                cardListEl.innerHTML = cards.length === 0 ? '<p class="text-sm text-slate-400">Henüz kart eklemediniz.</p>' : '';
                 cards.forEach(card => {
                     const totalSpending = purchases.filter(p => p.cardId === card.id).reduce((sum, p) => sum + parseFloat(p.totalAmount), 0);
                     const remainingLimit = parseFloat(card.cardLimit) - totalSpending;
                     const el = document.createElement('div');
-                    el.className = 'bg-gray-100 dark:bg-slate-700 p-3 rounded-lg border dark:border-slate-600';
-                    el.innerHTML = `<div class="flex justify-between items-start"><div><p class="font-semibold text-lg dark:text-white">${card.cardName}</p><p class="text-xs text-gray-500 dark:text-slate-400">Kesim: Ayın ${card.statementDay}. günü</p></div><button data-id="${card.id}" class="delete-card-btn text-gray-400 hover:text-red-600 text-2xl">&times;</button></div><div class="mt-2 text-sm"><p>Limit: <span class="font-medium">${parseFloat(card.cardLimit).toFixed(2)} ₺</span></p><p>Kullanılan: <span class="font-medium text-red-600">${totalSpending.toFixed(2)} ₺</span></p><p>Kalan Limit: <span class="font-medium text-green-600">${remainingLimit.toFixed(2)} ₺</span></p></div>`;
+                    el.className = 'bg-slate-700 p-3 rounded-lg border border-slate-600';
+                    el.innerHTML = `<div class="flex justify-between items-start"><div><p class="font-semibold text-lg text-white">${card.cardName}</p><p class="text-xs text-slate-400">Kesim: Ayın ${card.statementDay}. günü</p></div><button data-id="${card.id}" class="delete-card-btn text-gray-400 hover:text-red-600 text-2xl">&times;</button></div><div class="mt-2 text-sm"><p>Limit: <span class="font-medium">${parseFloat(card.cardLimit).toFixed(2)} ₺</span></p><p>Kullanılan: <span class="font-medium text-red-500">${totalSpending.toFixed(2)} ₺</span></p><p>Kalan Limit: <span class="font-medium text-green-500">${remainingLimit.toFixed(2)} ₺</span></p></div>`;
                     cardListEl.appendChild(el);
                 });
             }
@@ -318,22 +348,22 @@
             
             function renderPurchasesList() {
                 const listEl = document.getElementById('purchase-list-details');
-                listEl.innerHTML = purchases.length === 0 ? '<p class="text-sm text-gray-500 dark:text-slate-400 text-center py-4">Kayıtlı harcama yok.</p>' : '';
+                listEl.innerHTML = purchases.length === 0 ? '<p class="text-sm text-slate-400 text-center py-4">Kayıtlı harcama yok.</p>' : '';
                 if(purchases.length === 0) return;
                 
                 const sorted = [...purchases].sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate));
                 sorted.forEach(p => {
                     const card = cards.find(c => c.id === p.cardId);
                     const el = document.createElement('div');
-                    el.className = 'flex justify-between items-center bg-gray-50 dark:bg-slate-700 p-4 rounded-lg border dark:border-slate-600';
-                    el.innerHTML = `<div><p class="font-semibold dark:text-white">${p.purchaseName}</p><p class="text-sm text-gray-600 dark:text-slate-300"><span class="font-medium text-purple-500">${p.category || 'Diğer'}</span> - ${(p.totalAmount / p.installmentsCount).toFixed(2)} ₺ x ${p.installmentsCount} Taksit</p><p class="text-xs text-gray-500 dark:text-slate-400">Tarih: ${dayjs(p.purchaseDate).format('DD.MM.YYYY')} | Kart: ${card ? card.cardName : 'Bilinmeyen'}</p></div><div class="flex items-center space-x-2"><button data-id="${p.id}" class="edit-purchase-btn text-sm bg-blue-100 text-blue-800 font-semibold px-3 py-1 rounded-md hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-300">Düzenle</button><button data-id="${p.id}" class="delete-purchase-btn text-sm bg-red-100 text-red-800 font-semibold px-3 py-1 rounded-md hover:bg-red-200 dark:bg-red-900/50 dark:text-red-300">Sil</button></div>`;
+                    el.className = 'flex justify-between items-center bg-slate-700 p-4 rounded-lg border border-slate-600';
+                    el.innerHTML = `<div><p class="font-semibold text-white">${p.purchaseName}</p><p class="text-sm text-slate-300"><span class="font-medium text-purple-400">${p.category || 'Diğer'}</span> - ${(p.totalAmount / p.installmentsCount).toFixed(2)} ₺ x ${p.installmentsCount} Taksit</p><p class="text-xs text-slate-400">Tarih: ${dayjs(p.purchaseDate).format('DD.MM.YYYY')} | Kart: ${card ? card.cardName : 'Bilinmeyen'}</p></div><div class="flex items-center space-x-2"><button data-id="${p.id}" class="edit-purchase-btn text-sm bg-blue-900/50 text-blue-300 font-semibold px-3 py-1 rounded-md hover:bg-blue-800/50">Düzenle</button><button data-id="${p.id}" class="delete-purchase-btn text-sm bg-red-900/50 text-red-300 font-semibold px-3 py-1 rounded-md hover:bg-red-800/50">Sil</button></div>`;
                     listEl.appendChild(el);
                 });
             }
 
             function renderPaymentPlan() {
                  const el = document.getElementById('payment-plan');
-                 if (purchases.length === 0) { el.innerHTML = `<p class="text-center text-gray-500 dark:text-slate-400 py-8">Görüntülenecek harcama bulunmuyor.</p>`; return; }
+                 if (purchases.length === 0) { el.innerHTML = `<p class="text-center text-slate-400 py-8">Görüntülenecek harcama bulunmuyor.</p>`; return; }
                  const payments = {};
                  purchases.forEach(p => {
                      const card = cards.find(c => c.id === p.cardId);
@@ -350,14 +380,14 @@
                      }
                  });
                  const months = Object.keys(payments).sort();
-                 if (months.length === 0) { el.innerHTML = `<p class="text-center text-gray-500 dark:text-slate-400 py-8">Hesaplanacak ödeme yok.</p>`; return; }
+                 if (months.length === 0) { el.innerHTML = `<p class="text-center text-slate-400 py-8">Hesaplanacak ödeme yok.</p>`; return; }
                  const names = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
-                 let table = `<table class="min-w-full divide-y divide-gray-200 dark:divide-slate-700"><thead class="bg-gray-50 dark:bg-slate-800 sticky-header"><tr><th class="px-6 py-3 text-left text-xs uppercase sticky left-0 bg-gray-50 dark:bg-slate-800 z-20">Kart Adı</th>`;
+                 let table = `<table class="min-w-full divide-y divide-slate-700"><thead class="bg-slate-800 sticky-header"><tr><th class="px-6 py-3 text-left text-xs uppercase sticky left-0 bg-slate-800 z-20">Kart Adı</th>`;
                  months.forEach(key => table += `<th class="px-6 py-3 text-right text-xs uppercase">${names[parseInt(key.split('-')[1])-1]} ${key.split('-')[0]}</th>`);
-                 table += `</tr></thead><tbody class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">`;
+                 table += `</tr></thead><tbody class="bg-gray-900 divide-y divide-slate-700">`;
                  cards.forEach(card => {
                      if (purchases.some(p => p.cardId === card.id)) {
-                         table += `<tr><td class="px-6 py-4 font-medium sticky left-0 bg-white dark:bg-slate-900 z-10 align-top">${card.cardName}</td>`;
+                         table += `<tr><td class="px-6 py-4 font-medium sticky left-0 bg-gray-900 z-10 align-top">${card.cardName}</td>`;
                          months.forEach(key => {
                              const paymentData = (payments[key] && payments[key][card.id]) ? payments[key][card.id] : null;
                              let cellContent = '-';
@@ -367,12 +397,12 @@
                                 const amountHTML = `<p class="font-semibold text-right">${paymentData.amount.toFixed(2)} ₺</p>`;
                                 let actionHTML = '';
                                 if(isPaid){
-                                    actionHTML = `<div class="mt-1 text-right"><span class="text-xs text-green-500 font-bold">ÖDENDİ ✓</span><button data-key="${paymentKey}" class="undo-pay-btn text-xs text-gray-400 dark:text-slate-500 hover:text-black dark:hover:text-white ml-1">[Geri Al]</button></div>`;
+                                    actionHTML = `<div class="mt-1 text-right"><span class="text-xs text-green-500 font-bold">ÖDENDİ ✓</span><button data-key="${paymentKey}" class="undo-pay-btn text-xs text-slate-500 hover:text-white ml-1">[Geri Al]</button></div>`;
                                 } else {
                                     const statementDate = dayjs(`${key}-${String(card.statementDay).padStart(2, '0')}`);
                                     const dueDate = statementDate.add(10, 'days');
                                     const lateClass = dayjs().isAfter(dueDate) ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600';
-                                    actionHTML = `<div class="mt-1 text-right"><p class="text-xs text-gray-500 dark:text-slate-400 mb-1">Son Ödeme: ${dueDate.format('DD.MM')}</p><button data-key="${paymentKey}" class="pay-btn text-xs ${lateClass} text-white px-2 py-1 rounded-md w-full">Öde</button></div>`;
+                                    actionHTML = `<div class="mt-1 text-right"><p class="text-xs text-slate-400 mb-1">Son Ödeme: ${dueDate.format('DD.MM')}</p><button data-key="${paymentKey}" class="pay-btn text-xs ${lateClass} text-white px-2 py-1 rounded-md w-full">Öde</button></div>`;
                                 }
                                 cellContent = `<div>${amountHTML}${actionHTML}</div>`;
                              }
@@ -381,7 +411,7 @@
                          table += `</tr>`;
                      }
                  });
-                 table += `<tr class="bg-gray-100 dark:bg-slate-800"><td class="px-6 py-4 font-bold sticky left-0 bg-gray-100 dark:bg-slate-800 z-10">AYLIK KALAN ÖDEME</td>`;
+                 table += `<tr class="bg-slate-800"><td class="px-6 py-4 font-bold sticky left-0 bg-slate-800 z-10">AYLIK KALAN ÖDEME</td>`;
                  months.forEach(key => table += `<td class="px-6 py-4 text-right font-bold text-red-500">${(payments[key].unpaidTotal || 0).toFixed(2)} ₺</td>`);
                  table += `</tr>`;
                  table += '</tbody></table>';
