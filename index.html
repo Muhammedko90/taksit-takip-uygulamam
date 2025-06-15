@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+
     <title>MAK Taksit Asistanı</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#6d28d9">
@@ -16,7 +16,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-    
+
     <style>
         :root {
             --primary-color: #6d28d9;
@@ -54,6 +54,10 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.9); } }
         .item-fade-out { animation: fadeOut 0.3s ease-out forwards; }
+        
+        /* Privacy Mode Toggle CSS */
+        .toggle-checkbox:checked { right: 0; border-color: var(--primary-color); }
+        .toggle-checkbox:checked + .toggle-label { background-color: var(--primary-color); }
     </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-slate-200 transition-colors duration-300">
@@ -137,7 +141,7 @@
                     <div id="report-output" class="mt-6"></div>
                 </div>
             </div>
-            
+
             <div id="panel-settings" class="main-panel space-y-8">
                  <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
                      <h2 class="text-xl font-bold mb-4 dark:text-white">Tema Seçenekleri</h2>
@@ -166,6 +170,19 @@
                      </div>
                 </div>
                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
+                    <h2 class="text-xl font-bold mb-4 dark:text-white">Gizlilik</h2>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <label for="privacy-mode-toggle" class="font-medium text-white">Gizlilik Modu</label>
+                            <p class="text-sm text-slate-400 mt-1">Uygulamadaki tüm finansal tutarları gizler.</p>
+                        </div>
+                        <label for="privacy-mode-toggle" class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" value="" id="privacy-mode-toggle" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-600 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-800 peer-checked:bg-violet-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                        </label>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
                     <h2 class="text-xl font-bold mb-4 dark:text-white">Kartlarınızı Yönetin</h2>
                     <form id="add-card-form" class="space-y-4">
                         <input type="text" id="card-name" placeholder="Kart Adı" class="w-full px-3 py-2 border border-slate-600 rounded-md bg-slate-700" required>
@@ -183,6 +200,9 @@
                             <label for="import-data-input" class="w-full text-center block bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 font-semibold cursor-pointer transition-colors">Verileri İçe Aktar (Geri Yükle)</label>
                             <input type="file" id="import-data-input" class="hidden" accept=".json">
                         </div>
+                        <div class="border-t border-slate-600 !mt-6 !mb-2"></div>
+                         <button id="delete-all-data-btn" class="w-full bg-red-800 text-white py-2 px-4 rounded-md hover:bg-red-900 font-semibold transition-colors">TÜM VERİLERİ SİL</button>
+                         <p class="text-xs text-slate-500 text-center">Bu işlem geri alınamaz. Tüm kartlarınız, harcamalarınız ve ayarlarınız kalıcı olarak silinir.</p>
                     </div>
                 </div>
             </div>
@@ -234,7 +254,7 @@
     <div id="edit-card-modal" class="modal bg-slate-800 p-6 rounded-2xl shadow-xl max-w-lg w-full"></div>
     <div id="info-modal-backdrop" class="modal-backdrop"></div>
     <div id="info-modal" class="modal bg-slate-800 p-6 rounded-lg shadow-xl max-w-sm w-full"></div>
-    
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             dayjs.extend(window.dayjs_plugin_customParseFormat);
@@ -249,6 +269,7 @@
                 theme: '',
                 customThemeColor: null,
                 dashboardOrder: ['summary', 'plan', 'chart'],
+                privacyMode: false, // YENİ: Gizlilik modu varsayılanı
             };
             const CATEGORIES = ['Gıda', 'Fatura', 'Ulaşım', 'Giyim', 'Eğlence', 'Sağlık', 'Ev Eşyası', 'Dijital Servis', 'Diğer'];
             let categoryChartInstance = null;
@@ -280,7 +301,7 @@
                 document.getElementById('info-modal-cancel-btn').addEventListener('click', hideInfoModal);
                 document.getElementById('info-modal-confirm-btn').addEventListener('click', () => { if (confirmCallback) confirmCallback(); hideInfoModal(); });
             }
-            
+
             function hideInfoModal() { if(infoModal) infoModal.style.display = 'none'; if(infoModalBackdrop) infoModalBackdrop.style.display = 'none'; confirmCallback = null; }
             function openDeleteModal(id, type, name, element) { itemToDelete = { id, type, element }; const modalBody = document.getElementById('modal-body'); if (modalBody) modalBody.textContent = `"${name}" öğesini silmek istediğinizden emin misiniz? ${type === 'card' ? 'Bu karta ait tüm harcamalar da silinecektir.' : ''}`; deleteModal.style.display = 'block'; deleteBackdrop.style.display = 'block'; }
             function closeDeleteModal() { deleteModal.style.display = 'none'; deleteBackdrop.style.display = 'none'; }
@@ -303,7 +324,7 @@
                 document.getElementById('edit-purchase-form').addEventListener('submit', handleEditPurchaseSubmit);
             }
             function closeEditPurchaseModal() { editPurchaseModal.style.display = 'none'; editPurchaseBackdrop.style.display = 'none'; }
-            
+
             // --- VERİ YÖNETİMİ & TEMA ---
             function loadData() {
                 const storedData = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -313,8 +334,20 @@
                 } else {
                     applyTheme(appData.theme);
                 }
+                // YENİ: Gizlilik modu arayüzünü ayarla
+                const privacyToggle = document.getElementById('privacy-mode-toggle');
+                if (privacyToggle) privacyToggle.checked = appData.privacyMode;
             }
             function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(appData)); }
+            
+            // YENİ: Para birimi formatlama fonksiyonu (Gizlilik Modu için)
+            function formatCurrency(value) {
+                if (appData.privacyMode) {
+                    return '₺ --,--';
+                }
+                const numberValue = parseFloat(value);
+                return isNaN(numberValue) ? '₺ 0.00' : `₺ ${numberValue.toFixed(2)}`;
+            }
 
             function lightenColor(hex, percent) {
                 let r = parseInt(hex.substring(1, 3), 16);
@@ -344,20 +377,25 @@
                 appData.customThemeColor = hexColor;
             }
 
-            function applyTheme(themeName) { 
+            function applyTheme(themeName) {
                 const root = document.documentElement;
                 root.style.removeProperty('--primary-color');
                 root.style.removeProperty('--primary-color-light');
                 root.style.removeProperty('--primary-text-color');
                 root.style.removeProperty('--summary-grad-from');
                 root.style.removeProperty('--summary-grad-to');
-                root.className = `dark ${themeName || ''}`; 
+                root.className = `dark ${themeName || ''}`;
                 appData.theme = themeName;
                 appData.customThemeColor = null;
             }
-            
+
             // --- ONBOARDING ---
-            function checkOnboarding() { if (appData.cards.length === 0 && appData.purchases.length === 0) { showInfoModal('Taksit Asistanına hoş geldiniz! Başlamak için Ayarlar sekmesinden ilk kartınızı, ardından Harcamalar sekmesinden ilk harcamanızı ekleyebilirsiniz.', 'Hoş Geldiniz!'); } }
+            // GÜNCELLENDİ: Daha açıklayıcı bir hoş geldin mesajı
+            function checkOnboarding() {
+                if (appData.cards.length === 0 && appData.purchases.length === 0) {
+                    showInfoModal('<b>Taksit Asistanı\'na hoş geldiniz!</b><br><br>Başlamak için sağ alttaki <b>Ayarlar</b> (dişli ikonu) sekmesine gidin ve ilk kredi kartınızı ekleyin. Ardından <b>Harcamalar</b> sekmesinden ilk harcamanızı kaydedebilirsiniz.', 'Hoş Geldiniz!');
+                }
+            }
 
             // --- ARAYÜZ OLUŞTURMA & GÜNCELLEME ---
             function refreshUI() {
@@ -370,7 +408,7 @@
                 updateCardSelects();
                 populateCategorySelects();
             }
-            
+
             function renderCards() {
                 const cardListEl = document.getElementById('card-list');
                 if (!cardListEl) return;
@@ -381,7 +419,7 @@
                     const el = document.createElement('div');
                     el.className = 'bg-slate-700 p-3 rounded-lg border border-slate-600';
                     el.style.animation = 'fadeIn 0.5s';
-                    el.innerHTML = `<div class="flex justify-between items-start"><div><p class="font-semibold text-lg text-white">${card.cardName}</p><p class="text-xs text-slate-400">Kesim: Ayın ${card.statementDay}. günü</p></div><div class="flex items-center space-x-2"><button data-id="${card.id}" class="edit-card-btn text-sm bg-blue-900/50 text-blue-300 font-semibold px-3 py-1 rounded-md hover:bg-blue-800/50">Düzenle</button><button data-id="${card.id}" class="delete-card-btn text-sm bg-red-900/50 text-red-300 font-semibold px-3 py-1 rounded-md hover:bg-red-800/50">Sil</button></div></div><div class="mt-2 text-sm"><p>Limit: <span class="font-medium">${parseFloat(card.cardLimit).toFixed(2)} ₺</span></p><p>Kullanılan: <span class="font-medium text-red-500">${totalSpending.toFixed(2)} ₺</span></p><p>Kalan Limit: <span class="font-medium text-green-500">${remainingLimit.toFixed(2)} ₺</span></p></div>`;
+                    el.innerHTML = `<div class="flex justify-between items-start"><div><p class="font-semibold text-lg text-white">${card.cardName}</p><p class="text-xs text-slate-400">Kesim: Ayın ${card.statementDay}. günü</p></div><div class="flex items-center space-x-2"><button data-id="${card.id}" class="edit-card-btn text-sm bg-blue-900/50 text-blue-300 font-semibold px-3 py-1 rounded-md hover:bg-blue-800/50">Düzenle</button><button data-id="${card.id}" class="delete-card-btn text-sm bg-red-900/50 text-red-300 font-semibold px-3 py-1 rounded-md hover:bg-red-800/50">Sil</button></div></div><div class="mt-2 text-sm"><p>Limit: <span class="font-medium">${formatCurrency(card.cardLimit)}</span></p><p>Kullanılan: <span class="font-medium text-red-500">${formatCurrency(totalSpending)}</span></p><p>Kalan Limit: <span class="font-medium text-green-500">${formatCurrency(remainingLimit)}</span></p></div>`;
                     cardListEl.appendChild(el);
                 });
             }
@@ -405,7 +443,7 @@
                     el.className = 'flex justify-between items-center bg-slate-700 p-4 rounded-lg border border-slate-600';
                     el.style.animation = 'fadeIn 0.5s';
                     const recurringIcon = p.isRecurring ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block ml-2 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 12A8 8 0 1013 5.372" /></svg>` : '';
-                    el.innerHTML = `<div><p class="font-semibold text-white">${p.purchaseName}${recurringIcon}</p><p class="text-sm text-slate-300"><span class="font-medium" style="color:var(--primary-text-color);">${p.category || 'Diğer'}</span> - ${(p.totalAmount / p.installmentsCount).toFixed(2)} ₺ x ${p.installmentsCount} Taksit</p><p class="text-xs text-slate-400">Tarih: ${dayjs(p.purchaseDate).format('DD.MM.YYYY')} | Kart: ${card ? card.cardName : 'Bilinmeyen'}</p></div><div class="flex items-center space-x-2"><button data-id="${p.id}" class="edit-purchase-btn text-sm bg-blue-900/50 text-blue-300 font-semibold px-3 py-1 rounded-md hover:bg-blue-800/50">Düzenle</button><button data-id="${p.id}" class="delete-purchase-btn text-sm bg-red-900/50 text-red-300 font-semibold px-3 py-1 rounded-md hover:bg-red-800/50">Sil</button></div>`;
+                    el.innerHTML = `<div><p class="font-semibold text-white">${p.purchaseName}${recurringIcon}</p><p class="text-sm text-slate-300"><span class="font-medium" style="color:var(--primary-text-color);">${p.category || 'Diğer'}</span> - ${formatCurrency(p.totalAmount / p.installmentsCount)} x ${p.installmentsCount} Taksit</p><p class="text-xs text-slate-400">Tarih: ${dayjs(p.purchaseDate).format('DD.MM.YYYY')} | Kart: ${card ? card.cardName : 'Bilinmeyen'}</p></div><div class="flex items-center space-x-2"><button data-id="${p.id}" class="edit-purchase-btn text-sm bg-blue-900/50 text-blue-300 font-semibold px-3 py-1 rounded-md hover:bg-blue-800/50">Düzenle</button><button data-id="${p.id}" class="delete-purchase-btn text-sm bg-red-900/50 text-red-300 font-semibold px-3 py-1 rounded-md hover:bg-red-800/50">Sil</button></div>`;
                     listEl.appendChild(el);
                 });
             }
@@ -424,12 +462,12 @@
                     const el = document.createElement('div');
                     el.className = 'flex justify-between items-center bg-slate-700 p-4 rounded-lg border border-slate-600';
                     el.style.animation = 'fadeIn 0.5s';
-                    el.innerHTML = `<div><p class="font-semibold text-white">${p.purchaseName}</p><p class="text-sm text-slate-300">${p.category || 'Diğer'}</p><p class="text-xs text-slate-400">Kart: ${card ? card.cardName : 'Bilinmeyen'}</p></div><div class="text-right"><p class="font-semibold text-lg text-white">${monthlyCost.toFixed(2)} ₺</p><p class="text-xs text-slate-400">aylık</p></div>`;
+                    el.innerHTML = `<div><p class="font-semibold text-white">${p.purchaseName}</p><p class="text-sm text-slate-300">${p.category || 'Diğer'}</p><p class="text-xs text-slate-400">Kart: ${card ? card.cardName : 'Bilinmeyen'}</p></div><div class="text-right"><p class="font-semibold text-lg text-white">${formatCurrency(monthlyCost)}</p><p class="text-xs text-slate-400">aylık</p></div>`;
                     listEl.appendChild(el);
                 });
                 const summaryEl = document.createElement('div');
                 summaryEl.className = 'mt-6 pt-4 border-t border-slate-700 text-right';
-                summaryEl.innerHTML = `<p class="text-sm text-slate-300">Aylık Toplam Abonelik Gideri</p><p class="font-bold text-2xl text-white">${monthlyTotal.toFixed(2)} ₺</p>`;
+                summaryEl.innerHTML = `<p class="text-sm text-slate-300">Aylık Toplam Abonelik Gideri</p><p class="font-bold text-2xl text-white">${formatCurrency(monthlyTotal)}</p>`;
                 listEl.appendChild(summaryEl);
             }
 
@@ -453,7 +491,7 @@
                 doc.save(`harcama-raporu-${dayjs().format('YYYY-MM-DD')}.pdf`);
                 showInfoModal('Raporunuz başarıyla PDF olarak indirildi.', 'Başarılı', 'success');
             }
-            
+
             function updateCardSelects() {
                 const selects = document.querySelectorAll('#card-select, #edit-card-select');
                 selects.forEach(select => {
@@ -514,7 +552,7 @@
                              if(paymentData && paymentData.amount > 0) {
                                 const paymentKey = `${key}_${card.id}`;
                                 const isPaid = appData.paidMonths[paymentKey];
-                                const amountHTML = `<p class="font-semibold text-right">${paymentData.amount.toFixed(2)} ₺</p>`;
+                                const amountHTML = `<p class="font-semibold text-right">${formatCurrency(paymentData.amount)}</p>`;
                                 let actionHTML = '';
                                 if(isPaid){
                                     actionHTML = `<div class="mt-1 text-right"><span class="text-xs text-green-500 font-bold">ÖDENDİ ✓</span><button data-key="${paymentKey}" class="undo-pay-btn text-xs text-slate-500 hover:text-white ml-1">[Geri Al]</button></div>`;
@@ -532,7 +570,7 @@
                      }
                  });
                  table += `<tr class="bg-slate-800"><td class="px-6 py-4 font-bold sticky left-0 bg-slate-800 z-10">AYLIK KALAN ÖDEME</td>`;
-                 months.forEach(key => table += `<td class="px-6 py-4 text-right font-bold text-red-500">${(payments[key].unpaidTotal || 0).toFixed(2)} ₺</td>`);
+                 months.forEach(key => table += `<td class="px-6 py-4 text-right font-bold text-red-500">${formatCurrency(payments[key].unpaidTotal || 0)}</td>`);
                  table += `</tr>`;
                  table += '</tbody></table>';
                  el.innerHTML = table;
@@ -541,11 +579,26 @@
             function renderCategoryChart() {
                 const ctx = document.getElementById('categoryChart')?.getContext('2d');
                 if (!ctx) return;
+                
+                if (categoryChartInstance) categoryChartInstance.destroy();
+                
+                // YENİ: Gizlilik modunda grafik yerine mesaj göster
+                if(appData.privacyMode) {
+                    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                    ctx.font = "16px Inter"; ctx.fillStyle = '#94a3b8'; ctx.textAlign = "center";
+                    ctx.fillText("Veriler Gizlilik Modu'nda gizlenmiştir.", ctx.canvas.width / 2, ctx.canvas.height / 2);
+                    return;
+                }
+
                 const categoryTotals = appData.purchases.reduce((acc, p) => { acc[p.category || 'Diğer'] = (acc[p.category || 'Diğer'] || 0) + parseFloat(p.totalAmount); return acc; }, {});
                 const labels = Object.keys(categoryTotals);
                 const data = Object.values(categoryTotals);
-                if (categoryChartInstance) categoryChartInstance.destroy();
-                if (labels.length === 0) { ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); ctx.font = "16px Inter"; ctx.fillStyle = '#94a3b8'; ctx.textAlign = "center"; ctx.fillText("Gösterilecek harcama verisi yok.", ctx.canvas.width / 2, ctx.canvas.height / 2); return; }
+
+                if (labels.length === 0) {
+                    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                    ctx.font = "16px Inter"; ctx.fillStyle = '#94a3b8'; ctx.textAlign = "center";
+                    ctx.fillText("Gösterilecek harcama verisi yok.", ctx.canvas.width / 2, ctx.canvas.height / 2); return;
+                }
                 categoryChartInstance = new Chart(ctx, { type: 'pie', data: { labels, datasets: [{ label: 'Harcama Dağılımı', data, backgroundColor: ['#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef'], borderColor: '#1f2937', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: '#e2e8f0' } } } } });
             }
 
@@ -575,15 +628,13 @@
                         }
                     }
                 });
-
-                // YENİ MANTIK: Sadece ödenmemiş taksiti olan kartların kesim tarihini göster
+                
                 const payments = calculatePayments();
                 appData.cards.forEach(card => {
                     const statementDay = parseInt(card.statementDay);
                     if (isNaN(statementDay)) return;
-
                     let hasAnyFutureUnpaidInstallments = false;
-                    for (let i = 0; i < 24; i++) { // Gelecek 2 yılı kontrol et
+                    for (let i = 0; i < 24; i++) {
                         const futureMonthKey = today.add(i, 'month').format('YYYY-MM');
                         const paymentCheckKey = `${futureMonthKey}_${card.id}`;
                         if (payments[futureMonthKey] && payments[futureMonthKey][card.id] && !appData.paidMonths[paymentCheckKey]) {
@@ -591,29 +642,26 @@
                             break;
                         }
                     }
-                    
                     if (hasAnyFutureUnpaidInstallments) {
                         let nextStatementDate = today.date(statementDay);
                         if (today.date() >= statementDay) {
                             nextStatementDate = nextStatementDate.add(1, 'month');
                         }
-                        
                         if (!nextStatementDateInfo || nextStatementDate.isBefore(nextStatementDateInfo.date)) {
                             nextStatementDateInfo = { date: nextStatementDate, cardName: card.cardName };
                         }
                     }
                 });
 
-
                 summaryPanel.innerHTML = `<h2 class="text-xl font-bold mb-4">Durum Özeti</h2>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                    <div><p class="text-sm opacity-80">Bu Ay Kalan Ödeme</p><p class="text-2xl font-bold">${thisMonthPayment.toFixed(2)} ₺</p></div>
+                    <div><p class="text-sm opacity-80">Bu Ay Kalan Ödeme</p><p class="text-2xl font-bold">${formatCurrency(thisMonthPayment)}</p></div>
                     <div><p class="text-sm opacity-80">En Yakın Son Ödeme</p><p class="text-2xl font-bold">${nextDueDateInfo ? nextDueDateInfo.date.format('DD.MM.YYYY') : '-'}</p><p class="text-xs opacity-80">${nextDueDateInfo ? nextDueDateInfo.cardName : ''}</p></div>
                     <div><p class="text-sm opacity-80">En Yakın Kesim Tarihi</p><p class="text-2xl font-bold">${nextStatementDateInfo ? nextStatementDateInfo.date.format('DD.MM.YYYY') : '-'}</p><p class="text-xs opacity-80">${nextStatementDateInfo ? nextStatementDateInfo.cardName : ''}</p></div>
-                    <div><p class="text-sm opacity-80">Toplam Kalan Borç</p><p class="text-2xl font-bold">${totalDebt.toFixed(2)} ₺</p></div>
+                    <div><p class="text-sm opacity-80">Toplam Kalan Borç</p><p class="text-2xl font-bold">${formatCurrency(totalDebt)}</p></div>
                 </div>`;
             }
-            
+
             // --- OLAY İŞLEYİCİLER ---
             function handleEditCardSubmit(e) { e.preventDefault(); const id = e.target.elements['edit-card-id'].value; const index = appData.cards.findIndex(c => c.id === id); if (index === -1) return; appData.cards[index] = { ...appData.cards[index], cardName: e.target.elements['edit-card-name'].value, statementDay: parseInt(e.target.elements['edit-statement-day'].value), cardLimit: parseFloat(e.target.elements['edit-card-limit'].value) }; saveData(); refreshUI(); closeEditCardModal(); }
             function handleEditPurchaseSubmit(e) { e.preventDefault(); const id = e.target.elements['edit-purchase-id'].value; const index = appData.purchases.findIndex(p => p.id === id); if(index === -1) return; appData.purchases[index] = { ...appData.purchases[index], purchaseName: e.target.elements['edit-purchase-name'].value, purchaseDate: e.target.elements['edit-purchase-date'].value, totalAmount: e.target.elements['edit-total-amount'].value, installmentsCount: e.target.elements['edit-installments-count'].value, cardId: e.target.elements['edit-card-select'].value, category: e.target.elements['edit-purchase-category'].value, isRecurring: e.target.elements['edit-purchase-recurring'].checked }; saveData(); refreshUI(); closeEditPurchaseModal(); }
@@ -623,67 +671,67 @@
                 document.getElementById('bottom-nav').addEventListener('click', (e) => {
                     const clickedBtn = e.target.closest('.bottom-nav-btn');
                     if (!clickedBtn) return;
-                    document.querySelectorAll('.bottom-nav-btn').forEach(btn => btn.classList.remove('active', 'bg-slate-700', 'text-violet-400'));
-                    clickedBtn.classList.add('active', 'bg-slate-700', 'text-violet-400');
+                    document.querySelectorAll('.bottom-nav-btn').forEach(btn => btn.classList.remove('active'));
+                    clickedBtn.classList.add('active');
                     document.querySelectorAll('.main-panel').forEach(panel => panel.classList.remove('active'));
                     const panelId = `panel-${clickedBtn.dataset.panel}`;
                     document.getElementById(panelId).classList.add('active');
                 });
-                
+
                 // Formlar ve Filtreler
                 document.body.addEventListener('submit', e => {
                     if (e.target.id === 'add-card-form') { e.preventDefault(); appData.cards.push({ id: crypto.randomUUID(), cardName: e.target.elements['card-name'].value, statementDay: parseInt(e.target.elements['statement-day'].value), cardLimit: parseFloat(e.target.elements['card-limit'].value) }); saveData(); refreshUI(); e.target.reset(); }
                     if (e.target.id === 'add-purchase-form') { e.preventDefault(); const form = e.target.elements; appData.purchases.push({ id: crypto.randomUUID(), purchaseName: form['purchase-name'].value, purchaseDate: form['purchase-date'].value, totalAmount: form['total-amount'].value, installmentsCount: form['installments-count'].value, cardId: form['card-select'].value, category: form['purchase-category'].value, isRecurring: form['purchase-recurring'].checked }); saveData(); refreshUI(); e.target.reset(); document.getElementById('purchase-date').valueAsDate = new Date(); }
                 });
-                document.body.addEventListener('input', e => { 
+                document.body.addEventListener('input', e => {
                     if (e.target.id === 'search-input') renderPurchasesList();
                     if (e.target.id === 'custom-theme-picker') { applyCustomTheme(e.target.value); saveData(); }
                 });
-                document.body.addEventListener('change', e => { if (e.target.id === 'filter-category') renderPurchasesList(); if (e.target.id === 'import-data-input') { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (re) => { try { const importedData = JSON.parse(re.target.result); if (importedData && typeof importedData === 'object') { showConfirmModal('Mevcut tüm verileriniz bu yedekle değiştirilecek. Onaylıyor musunuz?', 'Veri Geri Yükleme', () => { appData = { ...DEFAULTS, ...importedData }; saveData(); refreshUI(); showInfoModal('Veriler başarıyla geri yüklendi!', 'Başarılı', 'success'); }); } } catch (error) { showInfoModal('Geçersiz dosya formatı.', 'Hata', 'error'); } }; reader.readAsText(file); e.target.value = ''; } });
-                
+                document.body.addEventListener('change', e => {
+                    if (e.target.id === 'filter-category') renderPurchasesList();
+                    if (e.target.id === 'import-data-input') { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (re) => { try { const importedData = JSON.parse(re.target.result); if (importedData && typeof importedData === 'object') { showConfirmModal('Mevcut tüm verileriniz bu yedekle değiştirilecek. Onaylıyor musunuz?', 'Veri Geri Yükleme', () => { appData = { ...DEFAULTS, ...importedData }; saveData(); window.location.reload(); }); } } catch (error) { showInfoModal('Geçersiz dosya formatı.', 'Hata', 'error'); } }; reader.readAsText(file); e.target.value = ''; }
+                    // YENİ: Gizlilik modu toggle
+                    if (e.target.id === 'privacy-mode-toggle') { appData.privacyMode = e.target.checked; saveData(); refreshUI(); }
+                });
+
                 // Diğer Butonlar
                 document.body.addEventListener('click', e => {
                     const btn = e.target.closest('button');
                     if (!btn) return;
                     if (btn.closest('#theme-selector')) { if (btn.dataset.theme !== undefined) { applyTheme(btn.dataset.theme); saveData(); } return; }
-                    
+
                     if (btn.matches('.quick-range-btn')) {
                         const range = btn.dataset.range;
-                        const endDateInput = document.getElementById('end-date');
-                        const startDateInput = document.getElementById('start-date');
-                        const generateBtn = document.getElementById('generate-report-btn');
+                        const endDateInput = document.getElementById('end-date'); const startDateInput = document.getElementById('start-date'); const generateBtn = document.getElementById('generate-report-btn');
                         if (!endDateInput || !startDateInput || !generateBtn) return;
-                        
-                        const today = dayjs();
-                        endDateInput.value = today.format('YYYY-MM-DD');
+                        const today = dayjs(); endDateInput.value = today.format('YYYY-MM-DD');
                         let startDate;
-
-                        if (range === 'week') startDate = today.subtract(7, 'day');
-                        else if (range === 'month') startDate = today.subtract(1, 'month');
-                        else if (range === 'year') startDate = today.subtract(1, 'year');
-
-                        if (startDate) {
-                            startDateInput.value = startDate.format('YYYY-MM-DD');
-                            generateBtn.click();
-                        }
-                        return;
+                        if (range === 'week') startDate = today.subtract(7, 'day'); else if (range === 'month') startDate = today.subtract(1, 'month'); else if (range === 'year') startDate = today.subtract(1, 'year');
+                        if (startDate) { startDateInput.value = startDate.format('YYYY-MM-DD'); generateBtn.click(); } return;
                     }
-
                     if (btn.id === 'generate-report-btn') {
                         const startDate = document.getElementById('start-date').value, endDate = document.getElementById('end-date').value;
                         if (!startDate || !endDate) { showInfoModal('Lütfen tarih aralığı seçin.', 'Uyarı', 'error'); return; }
                         const filtered = appData.purchases.filter(p => dayjs(p.purchaseDate).isAfter(dayjs(startDate).subtract(1, 'day')) && dayjs(p.purchaseDate).isBefore(dayjs(endDate).add(1, 'day')));
-                        const outputEl = document.getElementById('report-output');
-                        if(!outputEl) return;
+                        const outputEl = document.getElementById('report-output'); if(!outputEl) return;
                         if(filtered.length === 0){ outputEl.innerHTML = '<p class="text-center text-slate-400">Raporlanacak veri bulunamadı.</p>'; return; }
                         let total = 0; let reportHTML = '<div class="space-y-4">';
-                        filtered.forEach(p => { const card = appData.cards.find(c => c.id === p.cardId); total += parseFloat(p.totalAmount); reportHTML += `<div class="bg-slate-700 p-4 rounded-lg"><p class="font-semibold">${p.purchaseName}</p><p class="text-sm text-slate-300">${p.category || 'Diğer'} - ${parseFloat(p.totalAmount).toFixed(2)} ₺</p><p class="text-xs text-slate-400">${dayjs(p.purchaseDate).format('DD.MM.YYYY')} - ${card?.cardName || ''}</p></div>`; });
-                        reportHTML += `</div><div class="mt-6 text-right font-bold text-xl">Toplam: ${total.toFixed(2)} ₺</div><div class="mt-4 flex justify-end"><button id="export-pdf-btn" class="bg-red-600 text-white py-2 px-4 rounded-md font-semibold">PDF İndir</button></div>`;
+                        filtered.forEach(p => { const card = appData.cards.find(c => c.id === p.cardId); total += parseFloat(p.totalAmount); reportHTML += `<div class="bg-slate-700 p-4 rounded-lg"><p class="font-semibold">${p.purchaseName}</p><p class="text-sm text-slate-300">${p.category || 'Diğer'} - ${formatCurrency(p.totalAmount)}</p><p class="text-xs text-slate-400">${dayjs(p.purchaseDate).format('DD.MM.YYYY')} - ${card?.cardName || ''}</p></div>`; });
+                        reportHTML += `</div><div class="mt-6 text-right font-bold text-xl">Toplam: ${formatCurrency(total)}</div><div class="mt-4 flex justify-end"><button id="export-pdf-btn" class="bg-red-600 text-white py-2 px-4 rounded-md font-semibold">PDF İndir</button></div>`;
                         outputEl.innerHTML = reportHTML; return;
                     }
                     if (btn.id === 'export-pdf-btn') { const startDate = document.getElementById('start-date').value, endDate = document.getElementById('end-date').value; const filtered = appData.purchases.filter(p => dayjs(p.purchaseDate).isAfter(dayjs(startDate).subtract(1, 'day')) && dayjs(p.purchaseDate).isBefore(dayjs(endDate).add(1, 'day'))); exportReportAsPDF(startDate, endDate, filtered); return; }
                     if (btn.id === 'export-data-btn') { const dataStr = JSON.stringify(appData); const blob = new Blob([dataStr], {type: "application/json"}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `taksit-asistani-yedek-${dayjs().format('YYYY-MM-DD')}.json`; a.click(); URL.revokeObjectURL(url); showInfoModal('Veriler başarıyla yedeklendi.', 'Başarılı', 'success'); return; }
                     
+                    // YENİ: Tüm verileri silme butonu
+                    if (btn.id === 'delete-all-data-btn') {
+                        showConfirmModal('<b>Bu işlem KESİNLİKLE GERİ ALINAMAZ.</b><br><br>Tüm kart, harcama ve ayar verileriniz kalıcı olarak silinecektir. Devam etmek istediğinizden emin misiniz?', 'Tüm Verileri Sil', () => {
+                           localStorage.removeItem(STORAGE_KEY);
+                           window.location.reload();
+                        });
+                        return;
+                    }
+
                     const id = btn.dataset.id, key = btn.dataset.key;
                     if (btn.matches('.delete-card-btn')) openDeleteModal(id, 'card', appData.cards.find(c=>c.id===id).cardName, btn.closest('.bg-slate-700'));
                     if (btn.matches('.delete-purchase-btn')) openDeleteModal(id, 'purchase', appData.purchases.find(p=>p.id===id).purchaseName, btn.closest('.bg-slate-700'));
@@ -695,7 +743,7 @@
                     if (btn.id === 'confirm-delete-btn') {
                         if(itemToDelete.element) itemToDelete.element.classList.add('item-fade-out');
                         setTimeout(() => {
-                            if (itemToDelete.type === 'card') { Object.keys(appData.paidMonths).forEach(key => { if (key.endsWith(`_${itemToDelete.id}`)) delete appData.paidMonths[key]; }); appData.purchases = appData.purchases.filter(p => p.cardId !== itemToDelete.id); appData.cards = appData.cards.filter(c => c.id !== itemToDelete.id); } 
+                            if (itemToDelete.type === 'card') { Object.keys(appData.paidMonths).forEach(key => { if (key.endsWith(`_${itemToDelete.id}`)) delete appData.paidMonths[key]; }); appData.purchases = appData.purchases.filter(p => p.cardId !== itemToDelete.id); appData.cards = appData.cards.filter(c => c.id !== itemToDelete.id); }
                             else { appData.purchases = appData.purchases.filter(p => p.id !== itemToDelete.id); }
                             saveData(); refreshUI(); closeDeleteModal();
                         }, 300);
