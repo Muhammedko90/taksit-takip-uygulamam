@@ -182,14 +182,25 @@
         <h2 class="text-xl font-bold mb-4 text-white">Kartı Düzenle</h2>
         <form id="edit-card-form" class="space-y-4"></form>
     </div>
+     <!-- Generic Info/Confirm Modal -->
+    <div id="info-modal-backdrop" class="modal-backdrop"></div>
+    <div id="info-modal" class="modal bg-slate-800 p-6 rounded-lg shadow-xl max-w-sm w-full">
+        <h3 id="info-modal-title" class="text-lg font-medium text-white">Bilgi</h3>
+        <p id="info-modal-body" class="text-sm text-slate-400 mt-4"></p>
+        <div id="info-modal-buttons" class="mt-5 flex justify-end gap-3">
+            <button id="info-modal-ok-btn" class="bg-indigo-600 text-white py-2 px-4 rounded-md">Tamam</button>
+            <button id="info-modal-confirm-btn" class="bg-green-600 text-white py-2 px-4 rounded-md">Onayla</button>
+            <button id="info-modal-cancel-btn" class="bg-slate-600 text-slate-200 py-2 px-4 rounded-md">İptal</button>
+        </div>
+    </div>
     
     <script>
-        // PWA Service Worker Kaydı
+        // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('Service Worker kaydı başarılı:', reg))
-                    .catch(err => console.log('Service Worker kaydı başarısız:', err));
+                    .then(reg => console.log('Service Worker registration successful:', reg))
+                    .catch(err => console.log('Service Worker registration failed:', err));
             });
         }
 
@@ -200,8 +211,57 @@
             let cards = [], purchases = [], paidMonths = {}, notifiedPayments = {};
             const CATEGORIES = ['Gıda', 'Fatura', 'Ulaşım', 'Giyim', 'Eğlence', 'Sağlık', 'Ev Eşyası', 'Diğer'];
             let categoryChartInstance = null;
+            
+            // --- Modal Yönetimi ---
+            const infoModal = document.getElementById('info-modal');
+            const infoModalBackdrop = document.getElementById('info-modal-backdrop');
+            const infoModalTitle = document.getElementById('info-modal-title');
+            const infoModalBody = document.getElementById('info-modal-body');
+            const infoModalOkBtn = document.getElementById('info-modal-ok-btn');
+            const infoModalConfirmBtn = document.getElementById('info-modal-confirm-btn');
+            const infoModalCancelBtn = document.getElementById('info-modal-cancel-btn');
+            let confirmCallback = null;
 
-            // --- Veri Yönetimi ---
+            function showInfoModal(message, title = 'Bilgi') {
+                infoModalTitle.textContent = title;
+                infoModalBody.textContent = message;
+                infoModalOkBtn.style.display = 'block';
+                infoModalConfirmBtn.style.display = 'none';
+                infoModalCancelBtn.style.display = 'none';
+                infoModal.style.display = 'block';
+                infoModalBackdrop.style.display = 'block';
+            }
+
+            function showConfirmModal(message, title = 'Onay', callback) {
+                infoModalTitle.textContent = title;
+                infoModalBody.textContent = message;
+                infoModalOkBtn.style.display = 'none';
+                infoModalConfirmBtn.style.display = 'block';
+                infoModalCancelBtn.style.display = 'block';
+                infoModal.style.display = 'block';
+                infoModalBackdrop.style.display = 'block';
+                confirmCallback = callback;
+            }
+
+            function hideInfoModal() {
+                infoModal.style.display = 'none';
+                infoModalBackdrop.style.display = 'none';
+                confirmCallback = null;
+            }
+
+            infoModalOkBtn.addEventListener('click', hideInfoModal);
+            infoModalCancelBtn.addEventListener('click', hideInfoModal);
+            infoModalConfirmBtn.addEventListener('click', () => {
+                if (confirmCallback) {
+                    confirmCallback();
+                }
+                hideInfoModal();
+            });
+
+            // --- Veri Yönetimi (Yedekleme ve Geri Yükleme Aktif) ---
+            const exportBtn = document.getElementById('export-data-btn');
+            const importInput = document.getElementById('import-data-input');
+            
             function loadData() {
                 const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
                 cards = data?.cards || [];
@@ -213,6 +273,60 @@
             function saveData() {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify({ cards, purchases, paidMonths, notifiedPayments }));
             }
+            
+            exportBtn.addEventListener('click', () => {
+                const dataToExport = localStorage.getItem(STORAGE_KEY);
+                const parsedData = dataToExport ? JSON.parse(dataToExport) : { purchases: [] };
+
+                if (!dataToExport || !parsedData.purchases || parsedData.purchases.length === 0) {
+                    showInfoModal('Yedeklenecek veri bulunamadı.', 'Uyarı');
+                    return;
+                }
+                
+                const blob = new Blob([dataToExport], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const today = dayjs().format('YYYY-MM-DD');
+                a.download = `mak-taksit-yedek-${today}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showInfoModal('Verileriniz başarıyla yedeklendi.');
+            });
+
+            importInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+                        if (importedData && typeof importedData === 'object' && ('cards' in importedData && 'purchases' in importedData)) {
+                            showConfirmModal(
+                                'Mevcut tüm verileriniz bu yedekle değiştirilecek. Bu işlem geri alınamaz. Onaylıyor musunuz?',
+                                'Veri Geri Yükleme Onayı',
+                                () => {
+                                    localStorage.setItem(STORAGE_KEY, JSON.stringify(importedData));
+                                    loadData();
+                                    refreshUI();
+                                    showInfoModal('Veriler başarıyla geri yüklendi!');
+                                }
+                            );
+                        } else {
+                            showInfoModal('Seçilen dosya geçerli bir yedekleme dosyası değil.', 'Hata');
+                        }
+                    } catch (error) {
+                        console.error('Yedekleme dosyası okunurken hata oluştu:', error);
+                        showInfoModal('Yedekleme dosyası okunurken bir hata oluştu. Dosya formatı bozuk olabilir.', 'Hata');
+                    } finally {
+                        importInput.value = ''; // To allow re-selecting the same file
+                    }
+                };
+                reader.readAsText(file);
+            });
             
             function refreshUI() {
                 renderCards(); updateCardSelects(); populateCategorySelects();
@@ -377,7 +491,7 @@
             generateReportBtn.addEventListener('click', () => {
                 const startDate = document.getElementById('start-date').value;
                 const endDate = document.getElementById('end-date').value;
-                if (!startDate || !endDate) { alert('Lütfen başlangıç ve bitiş tarihlerini seçin.'); return; }
+                if (!startDate || !endDate) { showInfoModal('Lütfen başlangıç ve bitiş tarihlerini seçin.', 'Uyarı'); return; }
                 const filtered = purchases.filter(p => dayjs(p.purchaseDate).isAfter(dayjs(startDate).subtract(1, 'day')) && dayjs(p.purchaseDate).isBefore(dayjs(endDate).add(1, 'day')));
                 const outputEl = document.getElementById('report-output');
                 if(filtered.length === 0){ outputEl.innerHTML = '<p class="text-center text-slate-400">Seçilen tarihler arasında harcama bulunamadı.</p>'; return; }
