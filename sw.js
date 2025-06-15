@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mak-taksit-cache-v4'; // Önbellek sürümünü güncelledik
+const CACHE_NAME = 'mak-taksit-cache-v8'; // Önbellek sürümünü güncelledik
 const urlsToCache = [
   '/',
   '/index.html',
