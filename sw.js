@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mak-taksit-cache-v10'; // Önbellek sürümünü güncelledik
+const CACHE_NAME = 'mak-taksit-cache-v16'; // Önbellek sürümünü güncelledik
 const urlsToCache = [
   '/',
   '/index.html',
@@ -20,14 +20,14 @@ self.addEventListener('install', event => {
   );
 });
 
-// Eski önbellekleri temizle
+// Eski önbellekleri temizle ve yeni sürümü hemen etkinleştir
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.filter(name => name !== CACHE_NAME).map(name => caches.delete(name))
       );
-    })
+    }).then(() => self.clients.claim())
   );
 });
 
@@ -38,5 +38,24 @@ self.addEventListener('fetch', event => {
         return response || fetch(event.request);
       }
     )
+  );
+});
+
+// Bildirim tıklama olayını yönet
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      if (clientList.length > 0) {
+        let client = clientList[0];
+        for (let i = 0; i < clientList.length; i++) {
+          if (clientList[i].focused) {
+            client = clientList[i];
+          }
+        }
+        return client.focus();
+      }
+      return clients.openWindow('/');
+    })
   );
 });
