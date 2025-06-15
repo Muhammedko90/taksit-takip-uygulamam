@@ -18,22 +18,15 @@
     <style>
         body { font-family: 'Inter', sans-serif; padding-bottom: 80px; /* Alt navigasyon için boşluk */ }
         html.dark { color-scheme: dark; }
-        .modal-backdrop {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.5); z-index: 40;
-        }
-        .modal {
-            display: none; position: fixed; top: 50%; left: 50%;
-            transform: translate(-50%, -50%); z-index: 50;
-            max-height: 90vh; overflow-y: auto;
-        }
+        .modal-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 40; }
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 50; max-height: 90vh; overflow-y: auto; }
         .sticky-header th { position: sticky; top: 0; z-index: 10; }
         .main-panel { display: none; }
         .main-panel.active { display: block; }
-        .bottom-nav-btn.active { color: #8b5cf6; }
-        .summary-card {
-            background: linear-gradient(135deg, #6d28d9, #8b5cf6);
-        }
+        .bottom-nav-btn { transition: all 0.2s ease-in-out; }
+        .bottom-nav-btn.active { color: #a78bfa; background-color: #374151; }
+        .summary-card { background: linear-gradient(135deg, #6d28d9, #8b5cf6); }
+        .item-fade-out { transition: all 0.3s ease-out; opacity: 0; transform: scale(0.9); }
     </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-slate-200 transition-colors duration-300">
@@ -50,18 +43,14 @@
         <main id="main-content">
             <!-- Ana Sayfa Paneli -->
             <div id="panel-home" class="main-panel active space-y-8">
-                <div id="summary-panel" class="summary-card text-white p-6 rounded-2xl shadow-lg">
-                    <!-- Özet bilgileri buraya gelecek -->
-                </div>
+                <div id="summary-panel" class="summary-card text-white p-6 rounded-2xl shadow-lg"></div>
                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
                     <h2 class="text-xl font-bold mb-4 dark:text-white">Aylık Ödeme Planınız</h2>
                     <div id="payment-plan" class="overflow-x-auto"></div>
                 </div>
                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
                     <h2 class="text-xl font-bold mb-4 dark:text-white">Harcama Dağılımı</h2>
-                    <div class="max-w-sm mx-auto">
-                        <canvas id="categoryChart"></canvas>
-                    </div>
+                    <div class="max-w-sm mx-auto"><canvas id="categoryChart"></canvas></div>
                 </div>
             </div>
 
@@ -76,7 +65,11 @@
                        <input type="number" id="total-amount" step="0.01" placeholder="Toplam Tutar (₺)" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
                        <input type="number" id="installments-count" min="1" placeholder="Taksit Sayısı" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
                        <select id="card-select" class="mt-1 block w-full pl-3 pr-10 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required><option value="">Kart Seçin</option></select>
-                       <button type="submit" class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 font-semibold">Harcamayı Ekle</button>
+                       <div class="flex items-center">
+                           <input id="purchase-recurring" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                           <label for="purchase-recurring" class="ml-2 block text-sm text-gray-900 dark:text-slate-300">Aylık Tekrarla (Fatura, Abonelik vb.)</label>
+                        </div>
+                       <button type="submit" class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 font-semibold transition-colors">Harcamayı Ekle</button>
                     </form>
                 </div>
                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
@@ -102,7 +95,7 @@
                             <label for="end-date" class="text-sm font-medium">Bitiş Tarihi</label>
                             <input type="date" id="end-date" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700">
                         </div>
-                        <button id="generate-report-btn" class="w-full md:w-auto bg-teal-600 text-white py-2 px-4 rounded-md hover:bg-teal-700 font-semibold">Rapor Oluştur</button>
+                        <button id="generate-report-btn" class="w-full md:w-auto bg-teal-600 text-white py-2 px-4 rounded-md hover:bg-teal-700 font-semibold transition-colors">Rapor Oluştur</button>
                     </div>
                     <div id="report-output" class="mt-6"></div>
                  </div>
@@ -113,22 +106,29 @@
                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
                     <h2 class="text-xl font-bold mb-4 dark:text-white">Kartlarınızı Yönetin</h2>
                     <form id="add-card-form" class="space-y-4">
-                        <input type="text" id="card-name" placeholder="Kart Adı" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
-                        <input type="number" id="statement-day" min="1" max="31" placeholder="Ekstre Kesim Günü" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
-                        <input type="number" id="card-limit" min="0" placeholder="Kart Limiti (₺)" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
-                        <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 font-semibold">Kart Ekle</button>
+                        <input type="text" id="card-name" placeholder="Kart Adı" class="w-full px-3 py-2 border border-slate-600 rounded-md bg-slate-700" required>
+                        <input type="number" id="statement-day" min="1" max="31" placeholder="Ekstre Kesim Günü" class="w-full px-3 py-2 border border-slate-600 rounded-md bg-slate-700" required>
+                        <input type="number" id="card-limit" min="0" placeholder="Kart Limiti (₺)" class="w-full px-3 py-2 border border-slate-600 rounded-md bg-slate-700" required>
+                        <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 font-semibold transition-colors">Kart Ekle</button>
                     </form>
                     <div id="card-list" class="mt-6 space-y-3"></div>
                 </div>
                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
+                    <h2 class="text-xl font-bold mb-4 dark:text-white">Bildirim Ayarları</h2>
+                     <div class="space-y-3">
+                        <button id="notification-permission-btn" class="w-full bg-cyan-600 text-white py-2 px-4 rounded-md hover:bg-cyan-700 font-semibold">Bildirimlere İzin Ver</button>
+                        <p id="notification-status" class="text-xs text-center text-gray-500 dark:text-slate-400"></p>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
                     <h2 class="text-xl font-bold mb-4 dark:text-white">Veri Yönetimi</h2>
                     <div class="space-y-4">
-                        <button id="export-data-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 font-semibold">Verileri Dışa Aktar (Yedekle)</button>
+                        <button id="export-data-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 font-semibold transition-colors">Verileri Dışa Aktar (Yedekle)</button>
                         <div>
-                            <label for="import-data-input" class="w-full text-center block bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 font-semibold cursor-pointer">Verileri İçe Aktar (Geri Yükle)</label>
+                            <label for="import-data-input" class="w-full text-center block bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 font-semibold cursor-pointer transition-colors">Verileri İçe Aktar (Geri Yükle)</label>
                             <input type="file" id="import-data-input" class="hidden" accept=".json">
                         </div>
-                        <p class="text-xs text-gray-500 dark:text-slate-400">Verilerinizi bir dosyaya yedekleyebilir veya yedekten geri yükleyebilirsiniz. İçe aktarma işlemi mevcut verilerinizin üzerine yazacaktır.</p>
+                        <p class="text-xs text-slate-400">Verilerinizi bir dosyaya yedekleyebilir veya yedekten geri yükleyebilirsiniz.</p>
                     </div>
                 </div>
             </div>
@@ -138,19 +138,19 @@
     <!-- Alt Navigasyon Menüsü -->
     <footer id="bottom-nav" class="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 shadow-lg">
         <nav class="flex justify-around items-center h-16">
-            <button data-panel="home" class="bottom-nav-btn active flex flex-col items-center justify-center text-gray-500 dark:text-slate-400 w-full h-full">
+            <button data-panel="home" class="bottom-nav-btn active flex flex-col items-center justify-center text-slate-400 w-full h-full rounded-lg m-1 bg-slate-700 text-violet-400">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
                 <span class="text-xs mt-1">Ana Sayfa</span>
             </button>
-            <button data-panel="purchases" class="bottom-nav-btn flex flex-col items-center justify-center text-gray-500 dark:text-slate-400 w-full h-full">
+            <button data-panel="purchases" class="bottom-nav-btn flex flex-col items-center justify-center text-slate-400 w-full h-full rounded-lg m-1">
                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
                 <span class="text-xs mt-1">Harcamalar</span>
             </button>
-             <button data-panel="reports" class="bottom-nav-btn flex flex-col items-center justify-center text-gray-500 dark:text-slate-400 w-full h-full">
+             <button data-panel="reports" class="bottom-nav-btn flex flex-col items-center justify-center text-slate-400 w-full h-full rounded-lg m-1">
                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                 <span class="text-xs mt-1">Raporlar</span>
             </button>
-            <button data-panel="settings" class="bottom-nav-btn flex flex-col items-center justify-center text-gray-500 dark:text-slate-400 w-full h-full">
+            <button data-panel="settings" class="bottom-nav-btn flex flex-col items-center justify-center text-slate-400 w-full h-full rounded-lg m-1">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 <span class="text-xs mt-1">Ayarlar</span>
             </button>
@@ -159,18 +159,28 @@
 
     <!-- Modals -->
     <div id="delete-confirm-modal-backdrop" class="modal-backdrop"></div>
-    <div id="delete-confirm-modal" class="modal bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl max-w-sm w-full">
-        <h3 class="text-lg font-medium dark:text-white">Silme Onayı</h3>
-        <p id="modal-body" class="text-sm text-gray-500 dark:text-slate-400 mt-2"></p>
+    <div id="delete-confirm-modal" class="modal bg-slate-800 p-6 rounded-lg shadow-xl max-w-sm w-full">
+        <div class="flex items-center">
+            <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-900/50 sm:mx-0 sm:h-10 sm:w-10">
+                <svg class="h-6 w-6 text-red-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <h3 class="ml-4 text-lg font-medium text-white">Silme Onayı</h3>
+        </div>
+        <p id="modal-body" class="text-sm text-slate-400 mt-4 ml-14"></p>
         <div class="mt-5 flex justify-end gap-3">
-            <button id="cancel-delete-btn" class="bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-slate-200 py-2 px-4 rounded-md">İptal</button>
+            <button id="cancel-delete-btn" class="bg-slate-600 text-slate-200 py-2 px-4 rounded-md">İptal</button>
             <button id="confirm-delete-btn" class="bg-red-600 text-white py-2 px-4 rounded-md">Evet, Sil</button>
         </div>
     </div>
     <div id="edit-purchase-modal-backdrop" class="modal-backdrop"></div>
-    <div id="edit-purchase-modal" class="modal bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl max-w-lg w-full">
-        <h2 class="text-xl font-bold mb-4 dark:text-white">Harcamayı Düzenle</h2>
+    <div id="edit-purchase-modal" class="modal bg-slate-800 p-6 rounded-2xl shadow-xl max-w-lg w-full">
+        <h2 class="text-xl font-bold mb-4 text-white">Harcamayı Düzenle</h2>
         <form id="edit-purchase-form" class="space-y-4"></form>
+    </div>
+    <div id="edit-card-modal-backdrop" class="modal-backdrop"></div>
+    <div id="edit-card-modal" class="modal bg-slate-800 p-6 rounded-2xl shadow-xl max-w-lg w-full">
+        <h2 class="text-xl font-bold mb-4 text-white">Kartı Düzenle</h2>
+        <form id="edit-card-form" class="space-y-4"></form>
     </div>
     
     <script>
@@ -187,7 +197,7 @@
             dayjs.extend(window.dayjs_plugin_customParseFormat);
 
             const STORAGE_KEY = 'makTaksitAsistaniData';
-            let cards = [], purchases = [], paidMonths = {};
+            let cards = [], purchases = [], paidMonths = {}, notifiedPayments = {};
             const CATEGORIES = ['Gıda', 'Fatura', 'Ulaşım', 'Giyim', 'Eğlence', 'Sağlık', 'Ev Eşyası', 'Diğer'];
             let categoryChartInstance = null;
 
@@ -197,35 +207,104 @@
                 cards = data?.cards || [];
                 purchases = data?.purchases || [];
                 paidMonths = data?.paidMonths || {};
+                notifiedPayments = data?.notifiedPayments || {};
             }
 
             function saveData() {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify({ cards, purchases, paidMonths }));
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({ cards, purchases, paidMonths, notifiedPayments }));
             }
             
             function refreshUI() {
-                renderCards();
-                updateCardSelects();
-                populateCategorySelects();
-                renderPurchasesList();
-                renderPaymentPlan();
-                renderCategoryChart();
-                renderSummary();
+                renderCards(); updateCardSelects(); populateCategorySelects();
+                renderPurchasesList(); renderPaymentPlan();
+                renderCategoryChart(); renderSummary();
+                updateNotificationStatus();
+                checkAndScheduleNotifications();
+            }
+
+            // --- Bildirim Yönetimi ---
+            const notificationBtn = document.getElementById('notification-permission-btn');
+            const notificationStatusEl = document.getElementById('notification-status');
+
+            function updateNotificationStatus() {
+                if (!('Notification' in window) || !navigator.serviceWorker) {
+                    notificationStatusEl.textContent = 'Bu tarayıcı bildirimleri desteklemiyor.';
+                    notificationBtn.disabled = true;
+                    return;
+                }
+                const permission = Notification.permission;
+                if (permission === 'granted') {
+                    notificationStatusEl.textContent = 'Bildirimlere izin verildi.';
+                    notificationBtn.textContent = 'İzin Verildi';
+                    notificationBtn.disabled = true;
+                } else if (permission === 'denied') {
+                    notificationStatusEl.textContent = 'Bildirimler engellendi. Tarayıcı ayarlarından değiştirin.';
+                    notificationBtn.disabled = true;
+                } else {
+                    notificationStatusEl.textContent = 'Ödeme hatırlatıcıları için izin verin.';
+                    notificationBtn.disabled = false;
+                }
+            }
+
+            notificationBtn.addEventListener('click', () => {
+                Notification.requestPermission().then(permission => {
+                    updateNotificationStatus();
+                    if (permission === 'granted') {
+                        checkAndScheduleNotifications();
+                    }
+                });
+            });
+            
+            function checkAndScheduleNotifications() {
+                if (Notification.permission !== 'granted') return;
+                
+                const today = dayjs();
+                 purchases.forEach(p => {
+                    const card = cards.find(c => c.id === p.cardId);
+                    if (!card) return;
+                    
+                    const firstDate = dayjs(p.purchaseDate).date() >= parseInt(card.statementDay) ? dayjs(p.purchaseDate).add(1, 'month').startOf('month') : dayjs(p.purchaseDate).startOf('month');
+
+                    for (let i = 0; i < p.installmentsCount; i++) {
+                        const monthKey = firstDate.add(i, 'month').format('YYYY-MM');
+                        const paymentKey = `${monthKey}_${p.cardId}`;
+                        if (paidMonths[paymentKey] || notifiedPayments[paymentKey]) continue;
+
+                        const statementDate = dayjs(`${monthKey}-${String(card.statementDay).padStart(2, '0')}`);
+                        const dueDate = statementDate.add(10, 'days');
+                        const daysUntilDue = dueDate.diff(today, 'day');
+
+                        if (daysUntilDue <= 2 && daysUntilDue >= 0) {
+                            const title = `Ödeme Hatırlatıcısı: ${card.cardName}`;
+                            const body = `${dueDate.format('DD.MM.YYYY')} son ödeme tarihli ekstreniz yaklaşıyor.`;
+                            
+                            navigator.serviceWorker.ready.then(registration => {
+                                registration.showNotification(title, {
+                                    body: body,
+                                    icon: 'icon-192x192.png',
+                                    badge: 'icon-192x192.png'
+                                });
+                                notifiedPayments[paymentKey] = true;
+                                saveData();
+                            });
+                        }
+                    }
+                });
             }
 
             // --- Sekme Yönetimi ---
             const bottomNav = document.getElementById('bottom-nav');
             const mainPanels = document.querySelectorAll('.main-panel');
-
             bottomNav.addEventListener('click', (e) => {
                 const clickedBtn = e.target.closest('.bottom-nav-btn');
                 if (!clickedBtn) return;
-
-                bottomNav.querySelectorAll('.bottom-nav-btn').forEach(btn => btn.classList.remove('active'));
-                clickedBtn.classList.add('active');
-
-                mainPanels.forEach(panel => panel.classList.remove('active'));
                 
+                bottomNav.querySelectorAll('.bottom-nav-btn').forEach(btn => {
+                    btn.classList.remove('active', 'bg-slate-700', 'text-violet-400');
+                });
+                clickedBtn.classList.add('active', 'bg-slate-700', 'text-violet-400');
+                
+                mainPanels.forEach(panel => panel.classList.remove('active'));
                 const panelName = clickedBtn.dataset.panel;
                 document.getElementById(`panel-${panelName}`).classList.add('active');
             });
@@ -250,11 +329,7 @@
             function renderCategoryChart() {
                 const ctx = document.getElementById('categoryChart')?.getContext('2d');
                 if (!ctx) return;
-                const categoryTotals = purchases.reduce((acc, p) => {
-                    const category = p.category || 'Diğer';
-                    acc[category] = (acc[category] || 0) + parseFloat(p.totalAmount);
-                    return acc;
-                }, {});
+                const categoryTotals = purchases.reduce((acc, p) => { acc[p.category || 'Diğer'] = (acc[p.category || 'Diğer'] || 0) + parseFloat(p.totalAmount); return acc; }, {});
                 const labels = Object.keys(categoryTotals);
                 const data = Object.values(categoryTotals);
                 if (categoryChartInstance) categoryChartInstance.destroy();
@@ -270,17 +345,11 @@
                 });
             }
 
-            // --- Özet Paneli ---
             function renderSummary() {
                 const summaryPanel = document.getElementById('summary-panel');
-                let thisMonthPayment = 0;
-                let nextDueDate = null;
-                let totalDebt = purchases.reduce((sum, p) => sum + parseFloat(p.totalAmount), 0);
-                
-                const today = dayjs();
-                const currentMonthKey = today.format('YYYY-MM');
+                let thisMonthPayment = 0, nextDueDateInfo = null, totalDebt = 0;
+                const today = dayjs(), currentMonthKey = today.format('YYYY-MM');
 
-                const payments = {}; // Ödeme planını yeniden hesapla
                  purchases.forEach(p => {
                      const card = cards.find(c => c.id === p.cardId);
                      if (!card) return;
@@ -290,59 +359,29 @@
                          const key = firstDate.add(i, 'month').format('YYYY-MM');
                          const paymentKey = `${key}_${p.cardId}`;
                          if (!paidMonths[paymentKey]) {
-                             if(key === currentMonthKey) thisMonthPayment += installment;
+                             totalDebt += installment;
                              const statementDate = dayjs(`${key}-${String(card.statementDay).padStart(2, '0')}`);
                              const dueDate = statementDate.add(10, 'days');
-                             if(dueDate.isAfter(today) && (!nextDueDate || dueDate.isBefore(nextDueDate.date))) {
-                                 nextDueDate = { date: dueDate, cardName: card.cardName };
+                             if(dueDate.format('YYYY-MM') === currentMonthKey) thisMonthPayment += installment;
+                             if(dueDate.isAfter(today) && (!nextDueDateInfo || dueDate.isBefore(nextDueDateInfo.date))) {
+                                 nextDueDateInfo = { date: dueDate, cardName: card.cardName };
                              }
                          }
                      }
                  });
 
-                summaryPanel.innerHTML = `
-                    <h2 class="text-xl font-bold mb-4">Durum Özeti</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                        <div>
-                            <p class="text-sm opacity-80">Bu Ay Kalan Ödeme</p>
-                            <p class="text-2xl font-bold">${thisMonthPayment.toFixed(2)} ₺</p>
-                        </div>
-                        <div>
-                            <p class="text-sm opacity-80">En Yakın Son Ödeme</p>
-                            <p class="text-2xl font-bold">${nextDueDate ? nextDueDate.date.format('DD.MM.YYYY') : '-'}</p>
-                            <p class="text-xs opacity-80">${nextDueDate ? nextDueDate.cardName : ''}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm opacity-80">Toplam Borç</p>
-                            <p class="text-2xl font-bold">${totalDebt.toFixed(2)} ₺</p>
-                        </div>
-                    </div>
-                `;
+                summaryPanel.innerHTML = `<h2 class="text-xl font-bold mb-4">Durum Özeti</h2><div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center"><div><p class="text-sm opacity-80">Bu Ay Kalan Ödeme</p><p class="text-2xl font-bold">${thisMonthPayment.toFixed(2)} ₺</p></div><div><p class="text-sm opacity-80">En Yakın Son Ödeme</p><p class="text-2xl font-bold">${nextDueDateInfo ? nextDueDateInfo.date.format('DD.MM.YYYY') : '-'}</p><p class="text-xs opacity-80">${nextDueDateInfo ? nextDueDateInfo.cardName : ''}</p></div><div><p class="text-sm opacity-80">Toplam Kalan Borç</p><p class="text-2xl font-bold">${totalDebt.toFixed(2)} ₺</p></div></div>`;
             }
 
-            // --- Tarihe Göre Raporlama ---
             const generateReportBtn = document.getElementById('generate-report-btn');
             generateReportBtn.addEventListener('click', () => {
                 const startDate = document.getElementById('start-date').value;
                 const endDate = document.getElementById('end-date').value;
-                if (!startDate || !endDate) {
-                    alert('Lütfen başlangıç ve bitiş tarihlerini seçin.');
-                    return;
-                }
-
-                const filtered = purchases.filter(p => {
-                    const pDate = dayjs(p.purchaseDate);
-                    return pDate.isAfter(dayjs(startDate).subtract(1, 'day')) && pDate.isBefore(dayjs(endDate).add(1, 'day'));
-                });
-
+                if (!startDate || !endDate) { alert('Lütfen başlangıç ve bitiş tarihlerini seçin.'); return; }
+                const filtered = purchases.filter(p => dayjs(p.purchaseDate).isAfter(dayjs(startDate).subtract(1, 'day')) && dayjs(p.purchaseDate).isBefore(dayjs(endDate).add(1, 'day')));
                 const outputEl = document.getElementById('report-output');
-                if(filtered.length === 0){
-                    outputEl.innerHTML = '<p class="text-center text-slate-400">Seçilen tarihler arasında harcama bulunamadı.</p>';
-                    return;
-                }
-                
-                let total = 0;
-                let reportHTML = '<div class="space-y-4">';
+                if(filtered.length === 0){ outputEl.innerHTML = '<p class="text-center text-slate-400">Seçilen tarihler arasında harcama bulunamadı.</p>'; return; }
+                let total = 0; let reportHTML = '<div class="space-y-4">';
                 filtered.forEach(p => {
                     const card = cards.find(c => c.id === p.cardId);
                     total += parseFloat(p.totalAmount);
@@ -352,16 +391,34 @@
                 outputEl.innerHTML = reportHTML;
             });
 
-            // --- Mevcut Fonksiyonlar (renderCards, vs.) ---
+            function calculatePayments() {
+                const payments = {};
+                purchases.forEach(p => {
+                    const card = cards.find(c => c.id === p.cardId);
+                    if (!card) return;
+                    const installment = parseFloat(p.totalAmount) / parseInt(p.installmentsCount);
+                    const firstDate = dayjs(p.purchaseDate).date() >= parseInt(card.statementDay) ? dayjs(p.purchaseDate).add(1, 'month').startOf('month') : dayjs(p.purchaseDate).startOf('month');
+                    for (let i = 0; i < p.installmentsCount; i++) {
+                        const key = firstDate.add(i, 'month').format('YYYY-MM');
+                        if (!payments[key]) payments[key] = { total: 0, unpaidTotal: 0 };
+                        if (!payments[key][p.cardId]) payments[key][p.cardId] = { amount: 0 };
+                        payments[key][p.cardId].amount += installment;
+                        payments[key].total += installment;
+                        if (!paidMonths[`${key}_${p.cardId}`]) { payments[key].unpaidTotal += installment; }
+                    }
+                });
+                return payments;
+            }
+
             function renderCards() {
                 const cardListEl = document.getElementById('card-list');
-                cardListEl.innerHTML = cards.length === 0 ? '<p class="text-sm text-slate-400">Henüz kart eklemediniz.</p>' : '';
+                cardListEl.innerHTML = cards.length === 0 ? `<div class="text-center py-8"><svg class="mx-auto h-12 w-12 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 21z" /></svg><h3 class="mt-2 text-sm font-medium text-white">Henüz kart eklenmedi</h3><p class="mt-1 text-sm text-slate-400">Başlamak için ilk kartınızı ekleyin!</p></div>` : '';
                 cards.forEach(card => {
                     const totalSpending = purchases.filter(p => p.cardId === card.id).reduce((sum, p) => sum + parseFloat(p.totalAmount), 0);
                     const remainingLimit = parseFloat(card.cardLimit) - totalSpending;
                     const el = document.createElement('div');
                     el.className = 'bg-slate-700 p-3 rounded-lg border border-slate-600';
-                    el.innerHTML = `<div class="flex justify-between items-start"><div><p class="font-semibold text-lg text-white">${card.cardName}</p><p class="text-xs text-slate-400">Kesim: Ayın ${card.statementDay}. günü</p></div><button data-id="${card.id}" class="delete-card-btn text-gray-400 hover:text-red-600 text-2xl">&times;</button></div><div class="mt-2 text-sm"><p>Limit: <span class="font-medium">${parseFloat(card.cardLimit).toFixed(2)} ₺</span></p><p>Kullanılan: <span class="font-medium text-red-500">${totalSpending.toFixed(2)} ₺</span></p><p>Kalan Limit: <span class="font-medium text-green-500">${remainingLimit.toFixed(2)} ₺</span></p></div>`;
+                    el.innerHTML = `<div class="flex justify-between items-start"><div><p class="font-semibold text-lg text-white">${card.cardName}</p><p class="text-xs text-slate-400">Kesim: Ayın ${card.statementDay}. günü</p></div><div class="flex items-center space-x-2"><button data-id="${card.id}" class="edit-card-btn text-sm bg-blue-900/50 text-blue-300 font-semibold px-3 py-1 rounded-md hover:bg-blue-800/50">Düzenle</button><button data-id="${card.id}" class="delete-card-btn text-sm bg-red-900/50 text-red-300 font-semibold px-3 py-1 rounded-md hover:bg-red-800/50">Sil</button></div></div><div class="mt-2 text-sm"><p>Limit: <span class="font-medium">${parseFloat(card.cardLimit).toFixed(2)} ₺</span></p><p>Kullanılan: <span class="font-medium text-red-500">${totalSpending.toFixed(2)} ₺</span></p><p>Kalan Limit: <span class="font-medium text-green-500">${remainingLimit.toFixed(2)} ₺</span></p></div>`;
                     cardListEl.appendChild(el);
                 });
             }
@@ -381,24 +438,18 @@
                 const listEl = document.getElementById('purchase-list-details');
                 const searchTerm = document.getElementById('search-input').value.toLowerCase();
                 const category = document.getElementById('filter-category').value;
-                
                 let filtered = purchases;
-                if (searchTerm) {
-                    filtered = filtered.filter(p => p.purchaseName.toLowerCase().includes(searchTerm));
-                }
-                if (category) {
-                    filtered = filtered.filter(p => p.category === category);
-                }
-
+                if (searchTerm) { filtered = filtered.filter(p => p.purchaseName.toLowerCase().includes(searchTerm)); }
+                if (category) { filtered = filtered.filter(p => p.category === category); }
                 listEl.innerHTML = filtered.length === 0 ? '<p class="text-sm text-slate-400 text-center py-4">Filtreye uygun harcama yok.</p>' : '';
                 if(filtered.length === 0) return;
-                
                 const sorted = [...filtered].sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate));
                 sorted.forEach(p => {
                     const card = cards.find(c => c.id === p.cardId);
                     const el = document.createElement('div');
-                    el.className = 'flex justify-between items-center bg-slate-700 p-4 rounded-lg border border-slate-600';
-                    el.innerHTML = `<div><p class="font-semibold text-white">${p.purchaseName}</p><p class="text-sm text-slate-300"><span class="font-medium text-purple-400">${p.category || 'Diğer'}</span> - ${(p.totalAmount / p.installmentsCount).toFixed(2)} ₺ x ${p.installmentsCount} Taksit</p><p class="text-xs text-slate-400">Tarih: ${dayjs(p.purchaseDate).format('DD.MM.YYYY')} | Kart: ${card ? card.cardName : 'Bilinmeyen'}</p></div><div class="flex items-center space-x-2"><button data-id="${p.id}" class="edit-purchase-btn text-sm bg-blue-900/50 text-blue-300 font-semibold px-3 py-1 rounded-md hover:bg-blue-800/50">Düzenle</button><button data-id="${p.id}" class="delete-purchase-btn text-sm bg-red-900/50 text-red-300 font-semibold px-3 py-1 rounded-md hover:bg-red-800/50">Sil</button></div>`;
+                    el.className = 'flex justify-between items-center bg-slate-700 p-4 rounded-lg border border-slate-600 item-fade-in';
+                    const recurringIcon = p.isRecurring ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block ml-2 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 12A8 8 0 1013 5.372" /></svg>` : '';
+                    el.innerHTML = `<div><p class="font-semibold text-white">${p.purchaseName}${recurringIcon}</p><p class="text-sm text-slate-300"><span class="font-medium text-purple-400">${p.category || 'Diğer'}</span> - ${(p.totalAmount / p.installmentsCount).toFixed(2)} ₺ x ${p.installmentsCount} Taksit</p><p class="text-xs text-slate-400">Tarih: ${dayjs(p.purchaseDate).format('DD.MM.YYYY')} | Kart: ${card ? card.cardName : 'Bilinmeyen'}</p></div><div class="flex items-center space-x-2"><button data-id="${p.id}" class="edit-purchase-btn text-sm bg-blue-900/50 text-blue-300 font-semibold px-3 py-1 rounded-md hover:bg-blue-800/50">Düzenle</button><button data-id="${p.id}" class="delete-purchase-btn text-sm bg-red-900/50 text-red-300 font-semibold px-3 py-1 rounded-md hover:bg-red-800/50">Sil</button></div>`;
                     listEl.appendChild(el);
                 });
             }
@@ -406,21 +457,7 @@
             function renderPaymentPlan() {
                  const el = document.getElementById('payment-plan');
                  if (purchases.length === 0) { el.innerHTML = `<p class="text-center text-slate-400 py-8">Görüntülenecek harcama bulunmuyor.</p>`; return; }
-                 const payments = {};
-                 purchases.forEach(p => {
-                     const card = cards.find(c => c.id === p.cardId);
-                     if (!card) return;
-                     const installment = parseFloat(p.totalAmount) / parseInt(p.installmentsCount);
-                     const firstDate = dayjs(p.purchaseDate).date() >= parseInt(card.statementDay) ? dayjs(p.purchaseDate).add(1, 'month').startOf('month') : dayjs(p.purchaseDate).startOf('month');
-                     for (let i = 0; i < p.installmentsCount; i++) {
-                         const key = firstDate.add(i, 'month').format('YYYY-MM');
-                         if (!payments[key]) payments[key] = { total: 0, unpaidTotal: 0 };
-                         if (!payments[key][p.cardId]) payments[key][p.cardId] = { amount: 0 };
-                         payments[key][p.cardId].amount += installment;
-                         payments[key].total += installment;
-                         if (!paidMonths[`${key}_${p.cardId}`]) { payments[key].unpaidTotal += installment; }
-                     }
-                 });
+                 const payments = calculatePayments();
                  const months = Object.keys(payments).sort();
                  if (months.length === 0) { el.innerHTML = `<p class="text-center text-slate-400 py-8">Hesaplanacak ödeme yok.</p>`; return; }
                  const names = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
@@ -460,63 +497,55 @@
                  el.innerHTML = table;
             }
 
-            document.getElementById('add-card-form').addEventListener('submit', e => {
-                e.preventDefault();
-                cards.push({ id: crypto.randomUUID(), cardName: e.target.elements['card-name'].value, statementDay: parseInt(e.target.elements['statement-day'].value), cardLimit: parseFloat(e.target.elements['card-limit'].value) });
-                saveData(); refreshUI(); e.target.reset();
-            });
-
-            document.getElementById('add-purchase-form').addEventListener('submit', e => {
-                e.preventDefault();
-                const form = e.target.elements;
-                purchases.push({ id: crypto.randomUUID(), purchaseName: form['purchase-name'].value, purchaseDate: form['purchase-date'].value, totalAmount: form['total-amount'].value, installmentsCount: form['installments-count'].value, cardId: form['card-select'].value, category: form['purchase-category'].value });
-                saveData(); refreshUI(); e.target.reset();
-                form['purchase-date'].valueAsDate = new Date();
-            });
+            document.getElementById('add-card-form').addEventListener('submit', e => { e.preventDefault(); cards.push({ id: crypto.randomUUID(), cardName: e.target.elements['card-name'].value, statementDay: parseInt(e.target.elements['statement-day'].value), cardLimit: parseFloat(e.target.elements['card-limit'].value) }); saveData(); refreshUI(); e.target.reset(); });
+            document.getElementById('add-purchase-form').addEventListener('submit', e => { e.preventDefault(); const form = e.target.elements; purchases.push({ id: crypto.randomUUID(), purchaseName: form['purchase-name'].value, purchaseDate: form['purchase-date'].value, totalAmount: form['total-amount'].value, installmentsCount: form['installments-count'].value, cardId: form['card-select'].value, category: form['purchase-category'].value, isRecurring: form['purchase-recurring'].checked }); saveData(); refreshUI(); e.target.reset(); form['purchase-date'].valueAsDate = new Date(); });
             document.getElementById('purchase-date').valueAsDate = new Date();
-
             document.getElementById('app-container').addEventListener('click', e => {
-                const btn = e.target.closest('button');
-                if (!btn) return;
-                const id = btn.dataset.id;
-                const key = btn.dataset.key;
-                if (btn.matches('.delete-card-btn')) openDeleteModal(id, 'card', cards.find(c=>c.id===id).cardName);
-                if (btn.matches('.delete-purchase-btn')) openDeleteModal(id, 'purchase', purchases.find(p=>p.id===id).purchaseName);
+                const btn = e.target.closest('button'); if (!btn) return;
+                const id = btn.dataset.id; const key = btn.dataset.key;
+                if (btn.matches('.delete-card-btn')) { const el = btn.closest('.bg-slate-700'); openDeleteModal(id, 'card', cards.find(c=>c.id===id).cardName, el); }
+                if (btn.matches('.delete-purchase-btn')) { const el = btn.closest('.bg-slate-700'); openDeleteModal(id, 'purchase', purchases.find(p=>p.id===id).purchaseName, el); }
+                if (btn.matches('.edit-card-btn')) { openEditCardModal(id); }
                 if (btn.matches('.edit-purchase-btn')) openEditModal(id);
                 if (btn.matches('.pay-btn')) { paidMonths[key] = true; saveData(); refreshUI(); }
                 if (btn.matches('.undo-pay-btn')) { delete paidMonths[key]; saveData(); refreshUI(); }
             });
-
-            // --- Modal Yönetimi ---
-            const deleteModal = document.getElementById('delete-confirm-modal'), editModal = document.getElementById('edit-purchase-modal');
-            const deleteBackdrop = document.getElementById('delete-confirm-modal-backdrop'), editBackdrop = document.getElementById('edit-purchase-modal-backdrop');
-            const editForm = document.getElementById('edit-purchase-form');
+            const deleteModal = document.getElementById('delete-confirm-modal'), editModal = document.getElementById('edit-purchase-modal'), editCardModal = document.getElementById('edit-card-modal');
+            const deleteBackdrop = document.getElementById('delete-confirm-modal-backdrop'), editBackdrop = document.getElementById('edit-purchase-modal-backdrop'), editCardBackdrop = document.getElementById('edit-card-modal-backdrop');
+            const editForm = document.getElementById('edit-purchase-form'), editCardForm = document.getElementById('edit-card-form');
             let itemToDelete = {};
-
-            function openDeleteModal(id, type, name) {
-                itemToDelete = { id, type };
-                document.getElementById('modal-body').textContent = `"${name}" öğesini silmek istediğinizden emin misiniz? ${type === 'card' ? 'Bu karta ait tüm harcamalar da silinecektir.' : ''}`;
-                deleteModal.style.display = 'block'; deleteBackdrop.style.display = 'block';
-            }
+            function openDeleteModal(id, type, name, element) { itemToDelete = { id, type, element }; document.getElementById('modal-body').textContent = `"${name}" öğesini silmek istediğinizden emin misiniz? ${type === 'card' ? 'Bu karta ait tüm harcamalar da silinecektir.' : ''}`; deleteModal.style.display = 'block'; deleteBackdrop.style.display = 'block'; }
             function closeDeleteModal() { deleteModal.style.display = 'none'; deleteBackdrop.style.display = 'none'; }
             document.getElementById('cancel-delete-btn').addEventListener('click', closeDeleteModal);
             document.getElementById('confirm-delete-btn').addEventListener('click', () => {
-                if (itemToDelete.type === 'card') {
-                    Object.keys(paidMonths).forEach(key => { if (key.endsWith(`_${itemToDelete.id}`)) { delete paidMonths[key]; } });
-                    purchases = purchases.filter(p => p.cardId !== itemToDelete.id);
-                    cards = cards.filter(c => c.id !== itemToDelete.id);
-                } else {
-                    purchases = purchases.filter(p => p.id !== itemToDelete.id);
+                if(itemToDelete.element) {
+                    itemToDelete.element.classList.add('item-fade-out');
                 }
-                saveData(); refreshUI(); closeDeleteModal();
+                setTimeout(() => {
+                    if (itemToDelete.type === 'card') { Object.keys(paidMonths).forEach(key => { if (key.endsWith(`_${itemToDelete.id}`)) { delete paidMonths[key]; } }); purchases = purchases.filter(p => p.cardId !== itemToDelete.id); cards = cards.filter(c => c.id !== itemToDelete.id); } 
+                    else { purchases = purchases.filter(p => p.id !== itemToDelete.id); }
+                    saveData(); refreshUI(); closeDeleteModal();
+                }, 300);
+            });
+            
+            function openEditCardModal(id) {
+                const card = cards.find(c => c.id === id); if (!card) return;
+                editCardForm.innerHTML = `<input type="hidden" id="edit-card-id" value="${card.id}"><label>Kart Adı</label><input type="text" id="edit-card-name" value="${card.cardName}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><label>Kesim Günü</label><input type="number" id="edit-statement-day" value="${card.statementDay}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><label>Limit</label><input type="number" id="edit-card-limit" value="${card.cardLimit}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><div class="mt-6 flex justify-end space-x-3"><button type="button" class="cancel-edit-card-btn bg-slate-600 px-4 py-2 rounded-md">İptal</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md">Kaydet</button></div>`;
+                editCardModal.style.display = 'block'; editCardBackdrop.style.display = 'block';
+                editCardForm.querySelector('.cancel-edit-card-btn').addEventListener('click', closeEditCardModal);
+            }
+            function closeEditCardModal() { editCardModal.style.display = 'none'; editCardBackdrop.style.display = 'none'; }
+            editCardForm.addEventListener('submit', e => {
+                e.preventDefault(); const id = e.target.elements['edit-card-id'].value;
+                const index = cards.findIndex(c => c.id === id); if (index === -1) return;
+                cards[index] = { ...cards[index], cardName: e.target.elements['edit-card-name'].value, statementDay: parseInt(e.target.elements['edit-statement-day'].value), cardLimit: parseFloat(e.target.elements['edit-card-limit'].value) };
+                saveData(); refreshUI(); closeEditCardModal();
             });
 
             function openEditModal(id) {
-                const p = purchases.find(p => p.id === id);
-                if (!p) return;
-                editForm.innerHTML = `<input type="hidden" id="edit-purchase-id" value="${p.id}"><label>Açıklama</label><input type="text" id="edit-purchase-name" value="${p.purchaseName}" class="mt-1 block w-full border dark:border-slate-600 rounded-md p-2 bg-white dark:bg-slate-700" required><label>Kategori</label><select id="edit-purchase-category" class="mt-1 block w-full border dark:border-slate-600 rounded-md p-2 bg-white dark:bg-slate-700" required></select><label>Tarih</label><input type="date" id="edit-purchase-date" value="${p.purchaseDate}" class="mt-1 block w-full border dark:border-slate-600 rounded-md p-2 bg-white dark:bg-slate-700" required><label>Tutar</label><input type="number" id="edit-total-amount" step="0.01" value="${p.totalAmount}" class="mt-1 block w-full border dark:border-slate-600 rounded-md p-2 bg-white dark:bg-slate-700" required><label>Taksit</label><input type="number" id="edit-installments-count" min="1" value="${p.installmentsCount}" class="mt-1 block w-full border dark:border-slate-600 rounded-md p-2 bg-white dark:bg-slate-700" required><label>Kart</label><select id="edit-card-select" class="mt-1 block w-full border dark:border-slate-600 rounded-md p-2 bg-white dark:bg-slate-700" required></select><div class="mt-6 flex justify-end space-x-3"><button type="button" class="cancel-edit-btn bg-gray-200 dark:bg-slate-600 px-4 py-2 rounded-md">İptal</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md">Kaydet</button></div>`;
-                updateCardSelects();
-                populateCategorySelects();
+                const p = purchases.find(p => p.id === id); if (!p) return;
+                editForm.innerHTML = `<input type="hidden" id="edit-purchase-id" value="${p.id}"><label>Açıklama</label><input type="text" id="edit-purchase-name" value="${p.purchaseName}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><label>Kategori</label><select id="edit-purchase-category" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required></select><label>Tarih</label><input type="date" id="edit-purchase-date" value="${p.purchaseDate}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><label>Tutar</label><input type="number" id="edit-total-amount" step="0.01" value="${p.totalAmount}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><label>Taksit</label><input type="number" id="edit-installments-count" min="1" value="${p.installmentsCount}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><label>Kart</label><select id="edit-card-select" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required></select><div class="flex items-center mt-4"><input id="edit-purchase-recurring" type="checkbox" ${p.isRecurring ? 'checked' : ''} class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"><label for="edit-purchase-recurring" class="ml-2 block text-sm">Aylık Tekrarla</label></div><div class="mt-6 flex justify-end space-x-3"><button type="button" class="cancel-edit-btn bg-slate-600 px-4 py-2 rounded-md">İptal</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md">Kaydet</button></div>`;
+                updateCardSelects(); populateCategorySelects();
                 editForm.querySelector('#edit-card-select').value = p.cardId;
                 editForm.querySelector('#edit-purchase-category').value = p.category || 'Diğer';
                 editModal.style.display = 'block'; editBackdrop.style.display = 'block';
@@ -524,11 +553,9 @@
             }
             function closeEditModal() { editModal.style.display = 'none'; editBackdrop.style.display = 'none'; }
             editForm.addEventListener('submit', e => {
-                e.preventDefault();
-                const id = e.target.elements['edit-purchase-id'].value;
-                const index = purchases.findIndex(p => p.id === id);
-                if(index === -1) return;
-                purchases[index] = { id, purchaseName: e.target.elements['edit-purchase-name'].value, purchaseDate: e.target.elements['edit-purchase-date'].value, totalAmount: e.target.elements['edit-total-amount'].value, installmentsCount: e.target.elements['edit-installments-count'].value, cardId: e.target.elements['edit-card-select'].value, category: e.target.elements['edit-purchase-category'].value };
+                e.preventDefault(); const id = e.target.elements['edit-purchase-id'].value;
+                const index = purchases.findIndex(p => p.id === id); if(index === -1) return;
+                purchases[index] = { ...purchases[index], purchaseName: e.target.elements['edit-purchase-name'].value, purchaseDate: e.target.elements['edit-purchase-date'].value, totalAmount: e.target.elements['edit-total-amount'].value, installmentsCount: e.target.elements['edit-installments-count'].value, cardId: e.target.elements['edit-card-select'].value, category: e.target.elements['edit-purchase-category'].value, isRecurring: e.target.elements['edit-purchase-recurring'].checked };
                 saveData(); refreshUI(); closeEditModal();
             });
 
