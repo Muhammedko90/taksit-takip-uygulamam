@@ -13,6 +13,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/customParseFormat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/isSameOrBefore.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/localizedFormat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/tr.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -54,10 +57,6 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.9); } }
         .item-fade-out { animation: fadeOut 0.3s ease-out forwards; }
-        
-        /* Privacy Mode Toggle CSS */
-        .toggle-checkbox:checked { right: 0; border-color: var(--primary-color); }
-        .toggle-checkbox:checked + .toggle-label { background-color: var(--primary-color); }
     </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-slate-200 transition-colors duration-300">
@@ -72,11 +71,15 @@
         </header>
 
         <main id="main-content">
+            <!-- Ana Sayfa Paneli -->
             <div id="panel-home" class="main-panel active space-y-8">
                 <div id="summary-panel" class="summary-card text-white p-6 rounded-2xl shadow-lg"></div>
                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
-                    <h2 class="text-xl font-bold mb-4 dark:text-white">Aylık Ödeme Planınız</h2>
-                    <div id="payment-plan" class="overflow-x-auto"></div>
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-4">
+                        <h2 class="text-xl font-bold dark:text-white">Aylık Ödeme Planı</h2>
+                        <select id="plan-month-selector" class="w-full sm:w-auto px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-sm"></select>
+                    </div>
+                    <div id="payment-plan"></div>
                 </div>
                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
                     <h2 class="text-xl font-bold mb-4 dark:text-white">Harcama Dağılımı</h2>
@@ -84,6 +87,7 @@
                 </div>
             </div>
 
+            <!-- Harcamalar Paneli -->
             <div id="panel-purchases" class="main-panel space-y-8">
                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
                     <h2 class="text-xl font-bold mb-4 dark:text-white">Yeni Harcama Ekle</h2>
@@ -91,7 +95,7 @@
                        <input type="text" id="purchase-name" placeholder="Harcama Açıklaması" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
                        <select id="purchase-category" class="mt-1 block w-full pl-3 pr-10 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required></select>
                        <input type="date" id="purchase-date" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
-                       <input type="number" id="total-amount" step="0.01" placeholder="Toplam Tutar (₺)" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
+                       <input type="number" id="total-amount" step="0.01" min="0.01" placeholder="Toplam Tutar (₺)" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
                        <input type="number" id="installments-count" min="1" placeholder="Taksit Sayısı" class="mt-1 block w-full px-3 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required>
                        <select id="card-select" class="mt-1 block w-full pl-3 pr-10 py-2 border dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" required><option value="">Kart Seçin</option></select>
                        <div class="flex items-center">
@@ -110,7 +114,18 @@
                     <div id="purchase-list-details" class="space-y-4"></div>
                 </div>
             </div>
+            
+            <!-- Ödeme Geçmişi Paneli -->
+            <div id="panel-history" class="main-panel space-y-8">
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
+                    <h2 class="text-xl font-bold mb-4 dark:text-white">Ödeme Geçmişi</h2>
+                    <p class="text-sm text-slate-400 mb-6">"Ödendi" olarak işaretlediğiniz tüm ekstreleriniz burada listelenir.</p>
+                    <div id="history-list" class="space-y-4"></div>
+                    <div id="history-pagination" class="flex justify-between items-center mt-6"></div>
+                </div>
+            </div>
 
+            <!-- Abonelikler Paneli -->
             <div id="panel-subscriptions" class="main-panel space-y-8">
                  <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
                     <h2 class="text-xl font-bold mb-4 dark:text-white">Aylık Abonelikleriniz</h2>
@@ -119,6 +134,7 @@
                 </div>
             </div>
 
+            <!-- Raporlar Paneli -->
             <div id="panel-reports" class="main-panel space-y-8">
                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
                     <h2 class="text-xl font-bold mb-4 dark:text-white">Tarihe Göre Raporla</h2>
@@ -142,6 +158,7 @@
                 </div>
             </div>
 
+            <!-- Ayarlar Paneli -->
             <div id="panel-settings" class="main-panel space-y-8">
                  <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
                      <h2 class="text-xl font-bold mb-4 dark:text-white">Tema Seçenekleri</h2>
@@ -170,6 +187,16 @@
                      </div>
                 </div>
                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
+                    <h2 class="text-xl font-bold mb-4 dark:text-white">Bildirimler</h2>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <label id="notifications-label" for="enable-notifications-btn" class="font-medium text-white">Ödeme Hatırlatıcıları</label>
+                            <p class="text-sm text-slate-400 mt-1">Son ödeme tarihlerinden 2 gün önce bildirim alın.</p>
+                        </div>
+                        <button id="enable-notifications-btn" class="bg-sky-600 text-white py-2 px-4 rounded-md hover:bg-sky-700 font-semibold transition-colors disabled:bg-slate-500 disabled:cursor-not-allowed">Bildirimlere İzin Ver</button>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
                     <h2 class="text-xl font-bold mb-4 dark:text-white">Gizlilik</h2>
                     <div class="flex items-center justify-between">
                         <div>
@@ -185,12 +212,12 @@
                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
                     <h2 class="text-xl font-bold mb-4 dark:text-white">Kartlarınızı Yönetin</h2>
                     <form id="add-card-form" class="space-y-4">
-                        <input type="text" id="card-name" placeholder="Kart Adı" class="w-full px-3 py-2 border border-slate-600 rounded-md bg-slate-700" required>
-                        <input type="number" id="statement-day" min="1" max="31" placeholder="Ekstre Kesim Günü" class="w-full px-3 py-2 border border-slate-600 rounded-md bg-slate-700" required>
+                        <input type="text" id="card-name" placeholder="Kart Adı (Örn: Maaş Kartım)" class="w-full px-3 py-2 border border-slate-600 rounded-md bg-slate-700" required>
+                        <input type="number" id="statement-day" min="1" max="31" placeholder="Ekstre Kesim Günü (1-31)" class="w-full px-3 py-2 border border-slate-600 rounded-md bg-slate-700" required>
                         <input type="number" id="card-limit" min="0" placeholder="Kart Limiti (₺)" class="w-full px-3 py-2 border border-slate-600 rounded-md bg-slate-700" required>
                         <button type="submit" class="w-full text-white py-2 px-4 rounded-md font-semibold transition-colors" style="background-color: var(--primary-color);">Kart Ekle</button>
                     </form>
-                    <div id="card-list" class="mt-6 space-y-3"></div>
+                    <div id="card-list" class="mt-6 space-y-4"></div>
                 </div>
                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm">
                     <h2 class="text-xl font-bold mb-4 dark:text-white">Veri Yönetimi</h2>
@@ -209,8 +236,9 @@
         </main>
     </div>
 
+    <!-- Alt Navigasyon Menüsü -->
     <footer id="bottom-nav" class="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 shadow-lg z-30">
-        <nav class="flex justify-around items-center h-16 max-w-7xl mx-auto">
+        <nav class="flex justify-around items-center h-16 max-w-7xl mx-auto px-1">
             <button data-panel="home" class="bottom-nav-btn active flex flex-col items-center justify-center text-slate-400 w-full h-full rounded-lg m-1">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
                 <span class="text-xs mt-1">Ana Sayfa</span>
@@ -218,6 +246,13 @@
             <button data-panel="purchases" class="bottom-nav-btn flex flex-col items-center justify-center text-slate-400 w-full h-full rounded-lg m-1">
                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
                 <span class="text-xs mt-1">Harcamalar</span>
+            </button>
+             <!-- YENİ: Geçmiş Butonu -->
+            <button data-panel="history" class="bottom-nav-btn flex flex-col items-center justify-center text-slate-400 w-full h-full rounded-lg m-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="text-xs mt-1">Geçmiş</span>
             </button>
             <button data-panel="subscriptions" class="bottom-nav-btn flex flex-col items-center justify-center text-slate-400 w-full h-full rounded-lg m-1">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm5 2a1 1 0 00-1 1v8a1 1 0 102 0V6a1 1 0 00-1-1zm5-2a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
@@ -234,20 +269,9 @@
         </nav>
     </footer>
 
+    <!-- Modallar -->
     <div id="delete-confirm-modal-backdrop" class="modal-backdrop"></div>
-    <div id="delete-confirm-modal" class="modal bg-slate-800 p-6 rounded-lg shadow-xl max-w-sm w-full">
-        <div class="flex items-center">
-            <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-900/50 sm:mx-0 sm:h-10 sm:w-10">
-                <svg class="h-6 w-6 text-red-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-            </div>
-            <h3 class="ml-4 text-lg font-medium text-white">Silme Onayı</h3>
-        </div>
-        <p id="modal-body" class="text-sm text-slate-400 mt-4 ml-14"></p>
-        <div class="mt-5 flex justify-end gap-3">
-            <button id="cancel-delete-btn" class="bg-slate-600 text-slate-200 py-2 px-4 rounded-md">İptal</button>
-            <button id="confirm-delete-btn" class="bg-red-600 text-white py-2 px-4 rounded-md">Evet, Sil</button>
-        </div>
-    </div>
+    <div id="delete-confirm-modal" class="modal bg-slate-800 p-6 rounded-lg shadow-xl max-w-sm w-full"></div>
     <div id="edit-purchase-modal-backdrop" class="modal-backdrop"></div>
     <div id="edit-purchase-modal" class="modal bg-slate-800 p-6 rounded-2xl shadow-xl max-w-lg w-full"></div>
     <div id="edit-card-modal-backdrop" class="modal-backdrop"></div>
@@ -257,511 +281,362 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // Day.js eklentilerini ve yerelleştirmeyi yükle
             dayjs.extend(window.dayjs_plugin_customParseFormat);
+            dayjs.extend(window.dayjs_plugin_isSameOrBefore);
+            dayjs.extend(window.dayjs_plugin_localizedFormat);
+            dayjs.locale('tr');
 
             // --- DEĞİŞKENLER VE SABİTLER ---
-            const STORAGE_KEY = 'makTaksitAsistaniData_v4';
+            const STORAGE_KEY = 'makTaksitAsistaniData_v8'; // Veri yapısı değişti, sürüm güncellendi
             let appData = {};
+            let selectedPlanMonth = null;
+            let historyCurrentPage = 1; 
+            const HISTORY_ITEMS_PER_PAGE = 5; 
+            
             const DEFAULTS = {
                 cards: [],
                 purchases: [],
                 paidMonths: {},
                 theme: '',
                 customThemeColor: null,
-                dashboardOrder: ['summary', 'plan', 'chart'],
-                privacyMode: false, // YENİ: Gizlilik modu varsayılanı
+                privacyMode: false,
+                notificationPermission: 'default', 
+                scheduledReminders: {} 
             };
             const CATEGORIES = ['Gıda', 'Fatura', 'Ulaşım', 'Giyim', 'Eğlence', 'Sağlık', 'Ev Eşyası', 'Dijital Servis', 'Diğer'];
             let categoryChartInstance = null;
             let itemToDelete = {};
             let confirmCallback = null;
 
+            // --- DOM ELEMENTLERİ ---
+            const el = {
+                infoModal: document.getElementById('info-modal'),
+                infoModalBackdrop: document.getElementById('info-modal-backdrop'),
+                deleteConfirmModal: document.getElementById('delete-confirm-modal'),
+                deleteConfirmBackdrop: document.getElementById('delete-confirm-modal-backdrop'),
+                editPurchaseModal: document.getElementById('edit-purchase-modal'),
+                editPurchaseBackdrop: document.getElementById('edit-purchase-modal-backdrop'),
+                editCardModal: document.getElementById('edit-card-modal'),
+                editCardBackdrop: document.getElementById('edit-card-modal-backdrop'),
+                addPurchaseForm: document.getElementById('add-purchase-form'),
+                cardList: document.getElementById('card-list'),
+                purchaseList: document.getElementById('purchase-list-details'),
+                subscriptionList: document.getElementById('subscription-list'),
+                paymentPlan: document.getElementById('payment-plan'),
+                historyList: document.getElementById('history-list'),
+                historyPagination: document.getElementById('history-pagination'),
+                summaryPanel: document.getElementById('summary-panel'),
+                categoryChartCanvas: document.getElementById('categoryChart'),
+                purchaseDateInput: document.getElementById('purchase-date'),
+                notificationsBtn: document.getElementById('enable-notifications-btn'),
+                notificationsLabel: document.getElementById('notifications-label'),
+                planMonthSelector: document.getElementById('plan-month-selector')
+            };
+
             // --- MODAL YÖNETİMİ ---
-            const infoModal = document.getElementById('info-modal');
-            const infoModalBackdrop = document.getElementById('info-modal-backdrop');
-            const deleteModal = document.getElementById('delete-confirm-modal');
-            const deleteBackdrop = document.getElementById('delete-confirm-modal-backdrop');
-            const editPurchaseModal = document.getElementById('edit-purchase-modal');
-            const editPurchaseBackdrop = document.getElementById('edit-purchase-modal-backdrop');
-            const editCardModal = document.getElementById('edit-card-modal');
-            const editCardBackdrop = document.getElementById('edit-card-modal-backdrop');
-
-            function showInfoModal(message, title = 'Bilgi', type = 'info') {
-                const colors = { info: 'indigo', success: 'green', error: 'red' };
-                const color = colors[type] || 'indigo';
-                infoModal.innerHTML = `<h3 class="text-lg font-medium text-white">${title}</h3><p class="text-sm text-slate-400 mt-4">${message}</p><div class="mt-5 flex justify-end gap-3"><button id="info-modal-ok-btn" class="bg-${color}-600 text-white py-2 px-4 rounded-md">Tamam</button></div>`;
-                infoModal.style.display = 'block'; infoModalBackdrop.style.display = 'block';
-                document.getElementById('info-modal-ok-btn').addEventListener('click', hideInfoModal);
-            }
-
-            function showConfirmModal(message, title = 'Onay', callback) {
-                infoModal.innerHTML = `<h3 class="text-lg font-medium text-white">${title}</h3><p class="text-sm text-slate-400 mt-4">${message}</p><div class="mt-5 flex justify-end gap-3"><button id="info-modal-cancel-btn" class="bg-slate-600 text-slate-200 py-2 px-4 rounded-md">İptal</button><button id="info-modal-confirm-btn" class="bg-green-600 text-white py-2 px-4 rounded-md">Onayla</button></div>`;
-                infoModal.style.display = 'block'; infoModalBackdrop.style.display = 'block';
-                confirmCallback = callback;
-                document.getElementById('info-modal-cancel-btn').addEventListener('click', hideInfoModal);
-                document.getElementById('info-modal-confirm-btn').addEventListener('click', () => { if (confirmCallback) confirmCallback(); hideInfoModal(); });
-            }
-
-            function hideInfoModal() { if(infoModal) infoModal.style.display = 'none'; if(infoModalBackdrop) infoModalBackdrop.style.display = 'none'; confirmCallback = null; }
-            function openDeleteModal(id, type, name, element) { itemToDelete = { id, type, element }; const modalBody = document.getElementById('modal-body'); if (modalBody) modalBody.textContent = `"${name}" öğesini silmek istediğinizden emin misiniz? ${type === 'card' ? 'Bu karta ait tüm harcamalar da silinecektir.' : ''}`; deleteModal.style.display = 'block'; deleteBackdrop.style.display = 'block'; }
-            function closeDeleteModal() { deleteModal.style.display = 'none'; deleteBackdrop.style.display = 'none'; }
-            function openEditCardModal(id) {
-                const card = appData.cards.find(c => c.id === id); if (!card) return;
-                editCardModal.innerHTML = `<h2 class="text-xl font-bold mb-4 text-white">Kartı Düzenle</h2><form id="edit-card-form" class="space-y-4"><input type="hidden" id="edit-card-id" value="${card.id}"><label>Kart Adı</label><input type="text" id="edit-card-name" value="${card.cardName}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><label>Kesim Günü</label><input type="number" id="edit-statement-day" value="${card.statementDay}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><label>Limit</label><input type="number" id="edit-card-limit" value="${card.cardLimit}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-edit-card-btn" class="bg-slate-600 px-4 py-2 rounded-md">İptal</button><button type="submit" class="text-white px-4 py-2 rounded-md" style="background-color: var(--primary-color);">Kaydet</button></div></form>`;
-                editCardModal.style.display = 'block'; editCardBackdrop.style.display = 'block';
-                document.getElementById('cancel-edit-card-btn').addEventListener('click', closeEditCardModal);
-                document.getElementById('edit-card-form').addEventListener('submit', handleEditCardSubmit);
-            }
-            function closeEditCardModal() { editCardModal.style.display = 'none'; editCardBackdrop.style.display = 'none'; }
-            function openEditPurchaseModal(id) {
-                const p = appData.purchases.find(p => p.id === id); if (!p) return;
-                editPurchaseModal.innerHTML = `<h2 class="text-xl font-bold mb-4 text-white">Harcamayı Düzenle</h2><form id="edit-purchase-form" class="space-y-4"><input type="hidden" id="edit-purchase-id" value="${p.id}"><label>Açıklama</label><input type="text" id="edit-purchase-name" value="${p.purchaseName}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><label>Kategori</label><select id="edit-purchase-category" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required></select><label>Tarih</label><input type="date" id="edit-purchase-date" value="${p.purchaseDate}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><label>Tutar</label><input type="number" id="edit-total-amount" step="0.01" value="${p.totalAmount}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><label>Taksit</label><input type="number" id="edit-installments-count" min="1" value="${p.installmentsCount}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><label>Kart</label><select id="edit-card-select" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required></select><div class="flex items-center mt-4"><input id="edit-purchase-recurring" type="checkbox" ${p.isRecurring ? 'checked' : ''} class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"><label for="edit-purchase-recurring" class="ml-2 block text-sm">Aylık Tekrarla</label></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-edit-purchase-btn" class="bg-slate-600 px-4 py-2 rounded-md">İptal</button><button type="submit" class="text-white px-4 py-2 rounded-md" style="background-color: var(--primary-color);">Kaydet</button></div></form>`;
-                updateCardSelects(); populateCategorySelects();
-                document.querySelector('#edit-purchase-form #edit-card-select').value = p.cardId;
-                document.querySelector('#edit-purchase-form #edit-purchase-category').value = p.category || 'Diğer';
-                editPurchaseModal.style.display = 'block'; editPurchaseBackdrop.style.display = 'block';
-                document.getElementById('cancel-edit-purchase-btn').addEventListener('click', closeEditPurchaseModal);
-                document.getElementById('edit-purchase-form').addEventListener('submit', handleEditPurchaseSubmit);
-            }
-            function closeEditPurchaseModal() { editPurchaseModal.style.display = 'none'; editPurchaseBackdrop.style.display = 'none'; }
-
-            // --- VERİ YÖNETİMİ & TEMA ---
-            function loadData() {
-                const storedData = JSON.parse(localStorage.getItem(STORAGE_KEY));
-                appData = { ...DEFAULTS, ...storedData };
-                if (appData.theme === 'custom' && appData.customThemeColor) {
-                    applyCustomTheme(appData.customThemeColor);
-                } else {
-                    applyTheme(appData.theme);
-                }
-                // YENİ: Gizlilik modu arayüzünü ayarla
-                const privacyToggle = document.getElementById('privacy-mode-toggle');
-                if (privacyToggle) privacyToggle.checked = appData.privacyMode;
-            }
-            function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(appData)); }
+            function showInfoModal(message, title = 'Bilgi', type = 'info') { const colors = { info: 'indigo', success: 'green', error: 'red' }; const color = colors[type] || 'indigo'; el.infoModal.innerHTML = `<h3 class="text-lg font-medium text-white">${title}</h3><p class="text-sm text-slate-400 mt-4">${message}</p><div class="mt-5 flex justify-end gap-3"><button id="info-modal-ok-btn" class="bg-${color}-600 text-white py-2 px-4 rounded-md">Tamam</button></div>`; el.infoModal.style.display = 'block'; el.infoModalBackdrop.style.display = 'block'; document.getElementById('info-modal-ok-btn').addEventListener('click', hideInfoModal); }
+            function showConfirmModal(message, title = 'Onay', callback, confirmText = 'Onayla', cancelText = 'İptal') { el.infoModal.innerHTML = `<h3 class="text-lg font-medium text-white">${title}</h3><p class="text-sm text-slate-400 mt-4">${message}</p><div class="mt-5 flex justify-end gap-3"><button id="info-modal-cancel-btn" class="bg-slate-600 text-slate-200 py-2 px-4 rounded-md">${cancelText}</button><button id="info-modal-confirm-btn" class="bg-green-600 text-white py-2 px-4 rounded-md">${confirmText}</button></div>`; el.infoModal.style.display = 'block'; el.infoModalBackdrop.style.display = 'block'; confirmCallback = callback; document.getElementById('info-modal-cancel-btn').addEventListener('click', hideInfoModal); document.getElementById('info-modal-confirm-btn').addEventListener('click', () => { if (confirmCallback) confirmCallback(); hideInfoModal(); }); }
+            function hideInfoModal() { el.infoModal.style.display = 'none'; el.infoModalBackdrop.style.display = 'none'; confirmCallback = null; }
+            function openDeleteModal(id, type, name, element, callback) { itemToDelete = { id, type, element, callback }; const modalBody = el.deleteConfirmModal; modalBody.innerHTML = `<div class="flex items-center"><div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-900/50 sm:mx-0 sm:h-10 sm:w-10"><svg class="h-6 w-6 text-red-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></div><h3 class="ml-4 text-lg font-medium text-white">Silme Onayı</h3></div><p class="text-sm text-slate-400 mt-4 ml-14">"${name}" öğesini silmek istediğinizden emin misiniz? ${type === 'card' ? 'Bu karta ait tüm harcamalar da silinecektir.' : ''}</p><div class="mt-5 flex justify-end gap-3"><button id="cancel-delete-btn" class="bg-slate-600 text-slate-200 py-2 px-4 rounded-md">İptal</button><button id="confirm-delete-btn" class="bg-red-600 text-white py-2 px-4 rounded-md">Evet, Sil</button></div>`; el.deleteConfirmModal.style.display = 'block'; el.deleteConfirmBackdrop.style.display = 'block'; }
+            function closeDeleteModal() { el.deleteConfirmModal.style.display = 'none'; el.deleteConfirmBackdrop.style.display = 'none'; }
+            function openEditCardModal(id) { const card = appData.cards.find(c => c.id === id); if (!card) return; el.editCardModal.innerHTML = `<h2 class="text-xl font-bold mb-4 text-white">Kartı Düzenle</h2><form id="edit-card-form" class="space-y-4"><input type="hidden" id="edit-card-id" value="${card.id}"><label>Kart Adı</label><input type="text" id="edit-card-name" value="${card.cardName}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><label>Kesim Günü</label><input type="number" id="edit-statement-day" value="${card.statementDay}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><label>Limit</label><input type="number" id="edit-card-limit" value="${card.cardLimit}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-edit-card-btn" class="bg-slate-600 px-4 py-2 rounded-md">İptal</button><button type="submit" class="text-white px-4 py-2 rounded-md" style="background-color: var(--primary-color);">Kaydet</button></div></form>`; el.editCardModal.style.display = 'block'; el.editCardBackdrop.style.display = 'block'; }
+            function closeEditCardModal() { el.editCardModal.style.display = 'none'; el.editCardBackdrop.style.display = 'none'; }
+            function openEditPurchaseModal(id) { const p = appData.purchases.find(p => p.id === id); if (!p) return; el.editPurchaseModal.innerHTML = `<h2 class="text-xl font-bold mb-4 text-white">Harcamayı Düzenle</h2><form id="edit-purchase-form" class="space-y-4"><input type="hidden" id="edit-purchase-id" value="${p.id}"><label>Açıklama</label><input type="text" id="edit-purchase-name" value="${p.purchaseName}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><label>Kategori</label><select id="edit-purchase-category" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required></select><label>Tarih</label><input type="date" id="edit-purchase-date" value="${p.purchaseDate}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><label>Tutar</label><input type="number" id="edit-total-amount" step="0.01" value="${p.totalAmount}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><label>Taksit</label><input type="number" id="edit-installments-count" min="1" value="${p.installmentsCount}" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required><label>Kart</label><select id="edit-card-select" class="mt-1 block w-full border border-slate-600 rounded-md p-2 bg-slate-700" required></select><div class="flex items-center mt-4"><input id="edit-purchase-recurring" type="checkbox" ${p.isRecurring ? 'checked' : ''} class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"><label for="edit-purchase-recurring" class="ml-2 block text-sm">Aylık Tekrarla</label></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-edit-purchase-btn" class="bg-slate-600 px-4 py-2 rounded-md">İptal</button><button type="submit" class="text-white px-4 py-2 rounded-md" style="background-color: var(--primary-color);">Kaydet</button></div></form>`; updateCardSelects(); populateCategorySelects(); document.querySelector('#edit-purchase-form #edit-card-select').value = p.cardId; document.querySelector('#edit-purchase-form #edit-purchase-category').value = p.category || 'Diğer'; el.editPurchaseModal.style.display = 'block'; el.editPurchaseBackdrop.style.display = 'block'; }
+            function closeEditPurchaseModal() { el.editPurchaseModal.style.display = 'none'; el.editPurchaseBackdrop.style.display = 'none'; }
             
-            // YENİ: Para birimi formatlama fonksiyonu (Gizlilik Modu için)
-            function formatCurrency(value) {
-                if (appData.privacyMode) {
-                    return '₺ --,--';
-                }
-                const numberValue = parseFloat(value);
-                return isNaN(numberValue) ? '₺ 0.00' : `₺ ${numberValue.toFixed(2)}`;
-            }
-
-            function lightenColor(hex, percent) {
-                let r = parseInt(hex.substring(1, 3), 16);
-                let g = parseInt(hex.substring(3, 5), 16);
-                let b = parseInt(hex.substring(5, 7), 16);
-                r = parseInt(r * (100 + percent) / 100);
-                g = parseInt(g * (100 + percent) / 100);
-                b = parseInt(b * (100 + percent) / 100);
-                r = (r<255) ? r : 255;
-                g = (g<255) ? g : 255;
-                b = (b<255) ? b : 255;
-                const toHex = (c) => ('0'+(c.toString(16))).slice(-2);
-                return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-            }
-
-            function applyCustomTheme(hexColor) {
-                const root = document.documentElement;
-                root.className = 'dark'; // Remove other theme classes
-                const colorLight = lightenColor(hexColor, 20);
-                const colorText = lightenColor(hexColor, 40);
-                root.style.setProperty('--primary-color', hexColor);
-                root.style.setProperty('--primary-color-light', colorLight);
-                root.style.setProperty('--primary-text-color', colorText);
-                root.style.setProperty('--summary-grad-from', hexColor);
-                root.style.setProperty('--summary-grad-to', colorLight);
-                appData.theme = 'custom';
-                appData.customThemeColor = hexColor;
-            }
-
-            function applyTheme(themeName) {
-                const root = document.documentElement;
-                root.style.removeProperty('--primary-color');
-                root.style.removeProperty('--primary-color-light');
-                root.style.removeProperty('--primary-text-color');
-                root.style.removeProperty('--summary-grad-from');
-                root.style.removeProperty('--summary-grad-to');
-                root.className = `dark ${themeName || ''}`;
-                appData.theme = themeName;
-                appData.customThemeColor = null;
-            }
-
-            // --- ONBOARDING ---
-            // GÜNCELLENDİ: Daha açıklayıcı bir hoş geldin mesajı
-            function checkOnboarding() {
-                if (appData.cards.length === 0 && appData.purchases.length === 0) {
-                    showInfoModal('<b>Taksit Asistanı\'na hoş geldiniz!</b><br><br>Başlamak için sağ alttaki <b>Ayarlar</b> (dişli ikonu) sekmesine gidin ve ilk kredi kartınızı ekleyin. Ardından <b>Harcamalar</b> sekmesinden ilk harcamanızı kaydedebilirsiniz.', 'Hoş Geldiniz!');
-                }
-            }
+            // --- VERİ YÖNETİMİ & TEMA ---
+            function loadData() { const storedData = JSON.parse(localStorage.getItem(STORAGE_KEY)); appData = { ...DEFAULTS, ...storedData }; if (appData.theme === 'custom' && appData.customThemeColor) { applyCustomTheme(appData.customThemeColor); } else { applyTheme(appData.theme); } document.getElementById('privacy-mode-toggle').checked = appData.privacyMode; updateNotificationsUI(); }
+            function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(appData)); }
+            function formatCurrency(value) { if (appData.privacyMode) return '₺ --,--'; const numberValue = parseFloat(value); return isNaN(numberValue) ? '₺ 0.00' : `₺ ${numberValue.toFixed(2)}`; }
+            function lightenColor(hex, percent) { let r = parseInt(hex.substring(1, 3), 16); let g = parseInt(hex.substring(3, 5), 16); let b = parseInt(hex.substring(5, 7), 16); r = parseInt(r * (100 + percent) / 100); g = parseInt(g * (100 + percent) / 100); b = parseInt(b * (100 + percent) / 100); r = (r<255) ? r : 255; g = (g<255) ? g : 255; b = (b<255) ? b : 255; const toHex = (c) => ('0'+(c.toString(16))).slice(-2); return `#${toHex(r)}${toHex(g)}${toHex(b)}`; }
+            function applyCustomTheme(hexColor) { const root = document.documentElement; root.className = 'dark'; const colorLight = lightenColor(hexColor, 20); const colorText = lightenColor(hexColor, 40); root.style.setProperty('--primary-color', hexColor); root.style.setProperty('--primary-color-light', colorLight); root.style.setProperty('--primary-text-color', colorText); root.style.setProperty('--summary-grad-from', hexColor); root.style.setProperty('--summary-grad-to', colorLight); appData.theme = 'custom'; appData.customThemeColor = hexColor; }
+            function applyTheme(themeName) { const root = document.documentElement; root.style.removeProperty('--primary-color'); root.style.removeProperty('--primary-color-light'); root.style.removeProperty('--primary-text-color'); root.style.removeProperty('--summary-grad-from'); root.style.removeProperty('--summary-grad-to'); root.className = `dark ${themeName || ''}`; appData.theme = themeName; appData.customThemeColor = null; }
 
             // --- ARAYÜZ OLUŞTURMA & GÜNCELLEME ---
             function refreshUI() {
-                renderSummary();
-                renderPaymentPlan();
+                const paymentSchedule = calculatePaymentSchedule();
+                if (selectedPlanMonth === null) {
+                    selectedPlanMonth = findFirstUnpaidMonth(paymentSchedule);
+                }
+                populateMonthSelector(paymentSchedule, selectedPlanMonth);
+                renderSummary(paymentSchedule);
+                renderPaymentPlan(paymentSchedule, selectedPlanMonth);
+                renderHistory(paymentSchedule);
                 renderCategoryChart();
                 renderCards();
                 renderPurchasesList();
                 renderSubscriptions();
                 updateCardSelects();
                 populateCategorySelects();
+                checkAndScheduleReminders(paymentSchedule);
             }
 
-            function renderCards() {
-                const cardListEl = document.getElementById('card-list');
-                if (!cardListEl) return;
-                cardListEl.innerHTML = appData.cards.length === 0 ? `<div class="text-center py-8"><p class="mt-1 text-sm text-slate-400">Başlamak için ilk kartınızı ekleyin!</p></div>` : '';
-                appData.cards.forEach(card => {
-                    const totalSpending = appData.purchases.filter(p => p.cardId === card.id).reduce((sum, p) => sum + parseFloat(p.totalAmount), 0);
-                    const remainingLimit = parseFloat(card.cardLimit) - totalSpending;
-                    const el = document.createElement('div');
-                    el.className = 'bg-slate-700 p-3 rounded-lg border border-slate-600';
-                    el.style.animation = 'fadeIn 0.5s';
-                    el.innerHTML = `<div class="flex justify-between items-start"><div><p class="font-semibold text-lg text-white">${card.cardName}</p><p class="text-xs text-slate-400">Kesim: Ayın ${card.statementDay}. günü</p></div><div class="flex items-center space-x-2"><button data-id="${card.id}" class="edit-card-btn text-sm bg-blue-900/50 text-blue-300 font-semibold px-3 py-1 rounded-md hover:bg-blue-800/50">Düzenle</button><button data-id="${card.id}" class="delete-card-btn text-sm bg-red-900/50 text-red-300 font-semibold px-3 py-1 rounded-md hover:bg-red-800/50">Sil</button></div></div><div class="mt-2 text-sm"><p>Limit: <span class="font-medium">${formatCurrency(card.cardLimit)}</span></p><p>Kullanılan: <span class="font-medium text-red-500">${formatCurrency(totalSpending)}</span></p><p>Kalan Limit: <span class="font-medium text-green-500">${formatCurrency(remainingLimit)}</span></p></div>`;
-                    cardListEl.appendChild(el);
+            // GÜNCELLENDİ: Ödenen ayları filtreler
+            function populateMonthSelector(schedule, currentSelection) {
+                if (!el.planMonthSelector) return;
+                const allMonths = Object.keys(schedule).sort();
+                const unpaidMonths = allMonths.filter(monthKey => schedule[monthKey].unpaidTotal > 0);
+
+                el.planMonthSelector.innerHTML = '';
+
+                const allOption = new Option('Tüm Aylar', 'all');
+                el.planMonthSelector.add(allOption);
+                
+                unpaidMonths.forEach(monthKey => {
+                    const option = new Option(dayjs(monthKey).format('MMMM YYYY'), monthKey);
+                    el.planMonthSelector.add(option);
                 });
+
+                if (currentSelection) {
+                    el.planMonthSelector.value = currentSelection;
+                }
+            }
+            
+            function renderCards() { if (!el.cardList) return; el.cardList.innerHTML = appData.cards.length === 0 ? `<div class="text-center py-8"><p class="mt-1 text-sm text-slate-400">Başlamak için ilk kartınızı ekleyin!</p></div>` : ''; appData.cards.forEach(card => { const totalSpending = appData.purchases.filter(p => p.cardId === card.id).reduce((sum, p) => sum + parseFloat(p.totalAmount), 0); const remainingLimit = parseFloat(card.cardLimit) - totalSpending; const usagePercentage = card.cardLimit > 0 ? (totalSpending / card.cardLimit) * 100 : 0; const cardEl = document.createElement('div'); cardEl.className = 'bg-slate-700 p-4 rounded-lg border border-slate-600 transition-all duration-300'; cardEl.style.animation = 'fadeIn 0.5s'; cardEl.innerHTML = ` <div class="flex justify-between items-start"> <div> <p class="font-semibold text-lg text-white">${card.cardName}</p> <p class="text-xs text-slate-400">Kesim: Ayın ${card.statementDay}. günü</p> </div> <div class="flex items-center space-x-2"> <button data-id="${card.id}" class="edit-card-btn text-sm bg-blue-900/50 text-blue-300 font-semibold px-3 py-1 rounded-md hover:bg-blue-800/50">Düzenle</button> <button data-id="${card.id}" class="delete-card-btn text-sm bg-red-900/50 text-red-300 font-semibold px-3 py-1 rounded-md hover:bg-red-800/50">Sil</button> </div> </div> <div class="mt-3"> <div class="flex justify-between text-xs mb-1"> <span class="text-slate-400">Kullanılan: <span class="font-medium text-white">${formatCurrency(totalSpending)}</span></span> <span class="text-slate-400">Limit: <span class="font-medium text-white">${formatCurrency(card.cardLimit)}</span></span> </div> <div class="w-full bg-slate-600 rounded-full h-2.5"> <div class="h-2.5 rounded-full transition-all duration-500" style="width: ${Math.min(usagePercentage, 100)}%; background-color: ${usagePercentage > 90 ? '#ef4444' : usagePercentage > 70 ? '#f97316' : 'var(--primary-color)'};"></div> </div> <p class="text-right text-xs mt-1 text-green-400">Kalan Limit: <span class="font-bold">${formatCurrency(remainingLimit)}</span></p> </div>`; el.cardList.appendChild(cardEl); }); }
+            function renderPurchasesList() { if (!el.purchaseList) return; const searchTerm = document.getElementById('search-input').value.toLowerCase(); const category = document.getElementById('filter-category').value; let filtered = appData.purchases.filter(p => p.purchaseName.toLowerCase().includes(searchTerm) && (category ? p.category === category : true)); el.purchaseList.innerHTML = filtered.length === 0 ? '<p class="text-sm text-slate-400 text-center py-4">Filtreye uygun harcama yok.</p>' : ''; [...filtered].sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate)).forEach(p => { const card = appData.cards.find(c => c.id === p.cardId); const purchaseEl = document.createElement('div'); purchaseEl.className = 'flex justify-between items-center bg-slate-700 p-4 rounded-lg border border-slate-600'; const recurringIcon = p.isRecurring ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block ml-2 text-cyan-400" title="Tekrarlayan Harcama" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 12A8 8 0 1013 5.372" /></svg>` : ''; purchaseEl.innerHTML = `<div><p class="font-semibold text-white">${p.purchaseName}${recurringIcon}</p><p class="text-sm text-slate-300"><span class="font-medium" style="color:var(--primary-text-color);">${p.category || 'Diğer'}</span> - ${formatCurrency(p.totalAmount / p.installmentsCount)} x ${p.installmentsCount} Taksit</p><p class="text-xs text-slate-400">Tarih: ${dayjs(p.purchaseDate).format('DD.MM.YYYY')} | Kart: ${card ? card.cardName : 'Bilinmeyen'}</p></div><div class="flex items-center space-x-2"><button data-id="${p.id}" class="edit-purchase-btn text-sm bg-blue-900/50 text-blue-300 font-semibold px-3 py-1 rounded-md hover:bg-blue-800/50">Düzenle</button><button data-id="${p.id}" class="delete-purchase-btn text-sm bg-red-900/50 text-red-300 font-semibold px-3 py-1 rounded-md hover:bg-red-800/50">Sil</button></div>`; el.purchaseList.appendChild(purchaseEl); }); }
+            function renderSubscriptions() { if (!el.subscriptionList) return; const subscriptions = appData.purchases.filter(p => p.isRecurring); if (subscriptions.length === 0) { el.subscriptionList.innerHTML = '<p class="text-sm text-slate-400 text-center py-4">Gösterilecek abonelik bulunmuyor.</p>'; return; } el.subscriptionList.innerHTML = ''; let monthlyTotal = 0; subscriptions.forEach(p => { const card = appData.cards.find(c => c.id === p.cardId); const monthlyCost = parseFloat(p.totalAmount) / parseInt(p.installmentsCount); monthlyTotal += monthlyCost; const subEl = document.createElement('div'); subEl.className = 'flex justify-between items-center bg-slate-700 p-4 rounded-lg border border-slate-600'; subEl.innerHTML = ` <div> <p class="font-semibold text-white">${p.purchaseName}</p> <p class="text-sm text-slate-300">${p.category || 'Diğer'}</p> <p class="text-xs text-slate-400">Kart: ${card ? card.cardName : 'Bilinmeyen'}</p> </div> <div class="text-right flex items-center space-x-3"> <div> <p class="font-semibold text-lg text-white">${formatCurrency(monthlyCost)}</p> <p class="text-xs text-slate-400">aylık</p> </div> <div class="flex flex-col space-y-2"> <button data-id="${p.id}" class="edit-subscription-btn text-blue-400 hover:text-blue-300" title="Düzenle"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button> <button data-id="${p.id}" class="cancel-subscription-btn text-red-400 hover:text-red-300" title="Aboneliği İptal Et"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg></button> </div> </div>`; el.subscriptionList.appendChild(subEl); }); const summaryEl = document.createElement('div'); summaryEl.className = 'mt-6 pt-4 border-t border-slate-700 text-right'; summaryEl.innerHTML = `<p class="text-sm text-slate-300">Aylık Toplam Abonelik Gideri</p><p class="font-bold text-2xl text-white">${formatCurrency(monthlyTotal)}</p>`; el.subscriptionList.appendChild(summaryEl); }
+            
+            function calculatePaymentSchedule() { const schedule = {}; appData.purchases.forEach(p => { const card = appData.cards.find(c => c.id === p.cardId); if (!card) return; const purchaseDate = dayjs(p.purchaseDate); const statementDay = parseInt(card.statementDay); const installmentAmount = parseFloat(p.totalAmount) / parseInt(p.installmentsCount); let firstStatementDate = purchaseDate.date(statementDay); if (purchaseDate.date() >= statementDay) { firstStatementDate = firstStatementDate.add(1, 'month'); } const firstPaymentMonth = firstStatementDate.add(1, 'month'); for (let i = 0; i < p.installmentsCount; i++) { const paymentMonth = firstPaymentMonth.add(i, 'month'); const paymentMonthKey = paymentMonth.format('YYYY-MM'); const dueDate = paymentMonth.startOf('month').add(statementDay + 9, 'days'); if (!schedule[paymentMonthKey]) schedule[paymentMonthKey] = { total: 0, unpaidTotal: 0, details: {} }; if (!schedule[paymentMonthKey].details[p.cardId]) schedule[paymentMonthKey].details[p.cardId] = { amount: 0, dueDate: dueDate.format('YYYY-MM-DD') }; schedule[paymentMonthKey].details[p.cardId].amount += installmentAmount; schedule[paymentMonthKey].total += installmentAmount; const paymentKey = `${paymentMonthKey}_${p.cardId}`; if (!appData.paidMonths[paymentKey]) { schedule[paymentMonthKey].unpaidTotal += installmentAmount; } } }); return schedule; }
+            
+            function renderPaymentPlan(schedule, selectedMonthKey) { if (!el.paymentPlan) return; const monthsToRender = selectedMonthKey === 'all' ? Object.keys(schedule).filter(m => schedule[m].unpaidTotal > 0).sort() : (schedule[selectedMonthKey] ? [selectedMonthKey] : []); let content = ''; let hasAnyPayment = false; monthsToRender.forEach((monthKey, index) => { const monthData = schedule[monthKey]; if (!monthData) return; let monthCardsContent = ''; let unpaidTotalForMonth = 0; appData.cards.forEach(card => { const paymentData = monthData.details[card.id]; if (paymentData && paymentData.amount > 0) { const paymentKey = `${monthKey}_${card.id}`; const isPaid = appData.paidMonths[paymentKey]; if (isPaid) return; hasAnyPayment = true; unpaidTotalForMonth += paymentData.amount; const dueDate = dayjs(paymentData.dueDate); const lateClass = dayjs().isAfter(dueDate) ? 'border-red-500/50' : 'border-slate-600'; monthCardsContent += `<div class="bg-slate-900/50 p-4 rounded-lg border ${lateClass}"><div class="flex justify-between items-center"><div><p class="font-bold text-white">${card.cardName}</p><p class="text-xs text-slate-400">Son Ödeme: ${dueDate.format('DD MMMM YYYY')}</p></div><p class="text-xl font-semibold text-white">${formatCurrency(paymentData.amount)}</p></div><div class="mt-3 text-right"><button data-key="${paymentKey}" class="pay-btn text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md w-full sm:w-auto">Ödendi Olarak İşaretle</button></div></div>`; } }); if (monthCardsContent) { if (selectedMonthKey === 'all') { content += `<div class="${index > 0 ? 'mt-8' : ''}"><h3 class="text-lg font-semibold text-white border-b border-slate-600 pb-2 mb-4">${dayjs(monthKey).format('MMMM YYYY')}</h3><div class="space-y-4">${monthCardsContent}</div></div>`; } else { content += `<div class="space-y-4">${monthCardsContent}</div><div class="mt-6 pt-4 border-t border-slate-700 text-right"><p class="text-sm text-slate-300">${dayjs(monthKey).format('MMMM YYYY')} Kalan Toplam Ödeme</p><p class="font-bold text-2xl text-red-500">${formatCurrency(unpaidTotalForMonth)}</p></div>`; } } }); if (!hasAnyPayment) { el.paymentPlan.innerHTML = `<p class="text-center text-slate-400 py-8">Görüntülenecek ödeme bulunmuyor.</p>`; } else { el.paymentPlan.innerHTML = content; } }
+
+            function renderHistory(schedule) {
+                if (!el.historyList || !el.historyPagination) return;
+
+                const allPaidItems = Object.keys(appData.paidMonths)
+                    .map(paymentKey => {
+                        const paidInfo = appData.paidMonths[paymentKey];
+                        if (typeof paidInfo !== 'object' || !paidInfo.paidDate) return null; 
+
+                        const [monthKey, cardId] = paymentKey.split('_');
+                        const card = appData.cards.find(c => c.id === cardId);
+                        const amount = schedule[monthKey]?.details[cardId]?.amount || 0;
+                        
+                        if (!card || amount <= 0) return null;
+                        
+                        return {
+                            cardName: card.cardName,
+                            amount: amount,
+                            key: paymentKey,
+                            paidDate: paidInfo.paidDate,
+                            month: monthKey
+                        };
+                    })
+                    .filter(item => item !== null)
+                    .sort((a, b) => dayjs(b.paidDate).valueOf() - dayjs(a.paidDate).valueOf());
+
+                if (allPaidItems.length === 0) {
+                    el.historyList.innerHTML = '<p class="text-center text-slate-400 py-8">Henüz ödenmiş harcama yok.</p>';
+                    el.historyPagination.innerHTML = '';
+                    return;
+                }
+
+                const totalPages = Math.ceil(allPaidItems.length / HISTORY_ITEMS_PER_PAGE);
+                historyCurrentPage = Math.max(1, Math.min(historyCurrentPage, totalPages));
+
+                const startIndex = (historyCurrentPage - 1) * HISTORY_ITEMS_PER_PAGE;
+                const pageItems = allPaidItems.slice(startIndex, startIndex + HISTORY_ITEMS_PER_PAGE);
+
+                let content = '<div class="space-y-4">';
+                pageItems.forEach(item => {
+                    content += `
+                    <div class="bg-slate-700/50 p-4 rounded-lg">
+                        <div class="flex justify-between items-start">
+                             <div>
+                                <p class="font-semibold text-white">${item.cardName}</p>
+                                <p class="text-sm" style="color:var(--primary-text-color);">${dayjs(item.month).format('MMMM YYYY')} Ekstresi</p>
+                             </div>
+                              <span class="font-semibold text-xl text-green-400">${formatCurrency(item.amount)}</span>
+                        </div>
+                        <div class="flex justify-between items-center mt-3 pt-3 border-t border-slate-600/50">
+                            <p class="text-xs text-slate-400">Ödendi: ${dayjs(item.paidDate).format('DD MMMM YYYY, dddd')}</p>
+                            <button data-key="${item.key}" class="undo-pay-btn text-xs text-slate-500 hover:text-white">[Geri Al]</button>
+                        </div>
+                    </div>`;
+                });
+                content += '</div>';
+                el.historyList.innerHTML = content;
+
+                let paginationContent = '';
+                if (totalPages > 1) {
+                    paginationContent = `
+                        <button id="history-prev-btn" class="px-4 py-2 text-sm font-medium text-white bg-slate-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed" ${historyCurrentPage === 1 ? 'disabled' : ''}>Geri</button>
+                        <span class="text-sm text-slate-400">Sayfa ${historyCurrentPage} / ${totalPages}</span>
+                        <button id="history-next-btn" class="px-4 py-2 text-sm font-medium text-white bg-slate-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed" ${historyCurrentPage === totalPages ? 'disabled' : ''}>İleri</button>
+                    `;
+                }
+                el.historyPagination.innerHTML = paginationContent;
             }
 
-            function renderPurchasesList() {
-                const listEl = document.getElementById('purchase-list-details');
-                if (!listEl) return;
-                const searchInput = document.getElementById('search-input');
-                const filterCategory = document.getElementById('filter-category');
-                const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
-                const category = filterCategory ? filterCategory.value : '';
+            function renderCategoryChart() { if (!el.categoryChartCanvas) return; const ctx = el.categoryChartCanvas.getContext('2d'); if (categoryChartInstance) categoryChartInstance.destroy(); if(appData.privacyMode) { ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); ctx.font = "16px Inter"; ctx.fillStyle = '#94a3b8'; ctx.textAlign = "center"; ctx.fillText("Veriler Gizlilik Modu'nda gizlenmiştir.", ctx.canvas.width / 2, ctx.canvas.height / 2); return; } const categoryTotals = appData.purchases.reduce((acc, p) => { acc[p.category || 'Diğer'] = (acc[p.category || 'Diğer'] || 0) + parseFloat(p.totalAmount); return acc; }, {}); const labels = Object.keys(categoryTotals); const data = Object.values(categoryTotals); if (labels.length === 0) { ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); ctx.font = "16px Inter"; ctx.fillStyle = '#94a3b8'; ctx.textAlign = "center"; ctx.fillText("Gösterilecek harcama verisi yok.", ctx.canvas.width / 2, ctx.canvas.height / 2); return; } categoryChartInstance = new Chart(ctx, { type: 'pie', data: { labels, datasets: [{ label: 'Harcama Dağılımı', data, backgroundColor: ['#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef'], borderColor: '#1f2937', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: '#e2e8f0' } } } } }); }
+            function renderSummary(schedule) { if (!el.summaryPanel) return; let thisMonthPayment = 0, totalDebt = 0, nextDueDateInfo = null, nextStatementDateInfo = null; const today = dayjs(); const currentMonthKey = today.format('YYYY-MM'); if (schedule[currentMonthKey]) { thisMonthPayment = schedule[currentMonthKey].unpaidTotal; } Object.entries(schedule).forEach(([monthKey, monthData]) => { totalDebt += monthData.unpaidTotal; Object.entries(monthData.details).forEach(([cardId, cardData]) => { const paymentKey = `${monthKey}_${cardId}`; const dueDate = dayjs(cardData.dueDate); if (!appData.paidMonths[paymentKey] && dueDate.isAfter(today) && (!nextDueDateInfo || dueDate.isBefore(nextDueDateInfo.date))) { const card = appData.cards.find(c => c.id === cardId); nextDueDateInfo = { date: dueDate, cardName: card?.cardName || '' }; } }); }); appData.cards.forEach(card => { const statementDay = parseInt(card.statementDay); let nextStatementDate = today.date(statementDay); if (today.date() >= statementDay) nextStatementDate = nextStatementDate.add(1, 'month'); if (!nextStatementDateInfo || nextStatementDate.isBefore(nextStatementDateInfo.date)) { nextStatementDateInfo = { date: nextStatementDate, cardName: card.cardName }; } }); el.summaryPanel.innerHTML = `<h2 class="text-xl font-bold mb-4">Durum Özeti</h2><div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center"><div><p class="text-sm opacity-80">Bu Ay Kalan Ödeme</p><p class="text-2xl font-bold">${formatCurrency(thisMonthPayment)}</p></div><div><p class="text-sm opacity-80">En Yakın Son Ödeme</p><p class="text-2xl font-bold">${nextDueDateInfo ? nextDueDateInfo.date.format('DD.MM.YYYY') : '-'}</p><p class="text-xs opacity-80">${nextDueDateInfo ? nextDueDateInfo.cardName : ''}</p></div><div><p class="text-sm opacity-80">En Yakın Kesim Tarihi</p><p class="text-2xl font-bold">${nextStatementDateInfo ? nextStatementDateInfo.date.format('DD.MM.YYYY') : '-'}</p><p class="text-xs opacity-80">${nextStatementDateInfo ? nextStatementDateInfo.cardName : ''}</p></div><div><p class="text-sm opacity-80">Toplam Kalan Borç</p><p class="text-2xl font-bold">${formatCurrency(totalDebt)}</p></div></div>`; }
+            
+            // --- YARDIMCI & RAPORLAMA FONKSİYONLARI ---
+            function findFirstUnpaidMonth(schedule) { const today = dayjs(); const currentMonthKey = today.format('YYYY-MM'); const sortedMonths = Object.keys(schedule).sort(); for (const monthKey of sortedMonths) { if (monthKey >= currentMonthKey && schedule[monthKey].unpaidTotal > 0) { return monthKey; } } if (sortedMonths.length > 0) return sortedMonths[0]; return currentMonthKey; }
+            function getFirstPaymentMonthKey(purchase) { const card = appData.cards.find(c => c.id === purchase.cardId); if (!card) return dayjs().format('YYYY-MM'); const purchaseDate = dayjs(purchase.purchaseDate); const statementDay = parseInt(card.statementDay); let firstStatementDate = purchaseDate.date(statementDay); if (purchaseDate.date() >= statementDay) { firstStatementDate = firstStatementDate.add(1, 'month'); } const firstPaymentMonth = firstStatementDate.add(1, 'month'); return firstPaymentMonth.format('YYYY-MM'); }
+            function updateCardSelects() { document.querySelectorAll('#card-select, #edit-card-select').forEach(select => { if (!select) return; const currentVal = select.value; select.innerHTML = '<option value="">Kart Seçin</option>'; appData.cards.forEach(card => select.add(new Option(card.cardName, card.id))); if (appData.cards.find(c => c.id === currentVal)) select.value = currentVal; }); }
+            function populateCategorySelects() { document.querySelectorAll('#purchase-category, #edit-purchase-category, #filter-category').forEach(select => { if (!select) return; const isFilter = select.id === 'filter-category'; select.innerHTML = `<option value="">${isFilter ? 'Tüm Kategoriler' : 'Kategori Seçin'}</option>`; CATEGORIES.forEach(cat => select.add(new Option(cat, cat))); }); }
+            function checkOnboarding() { if (appData.cards.length === 0 && appData.purchases.length === 0) { showInfoModal('<b>Taksit Asistanı\'na hoş geldiniz!</b><br><br>Başlamak için sağ alttaki <b>Ayarlar</b> (dişli ikonu) sekmesine gidin ve ilk kredi kartınızı ekleyin. Ardından <b>Harcamalar</b> sekmesinden ilk harcamanızı kaydedebilirsiniz.', 'Hoş Geldiniz!'); } }
+            
+            function handleQuickReportRange(range) {
+                const endDateInput = document.getElementById('end-date');
+                const startDateInput = document.getElementById('start-date');
+                const today = dayjs();
+                endDateInput.value = today.format('YYYY-MM-DD');
+                let startDate;
+                if (range === 'week') startDate = today.subtract(7, 'day');
+                else if (range === 'month') startDate = today.subtract(1, 'month');
+                else if (range === 'year') startDate = today.subtract(1, 'year');
+                if (startDate) {
+                    startDateInput.value = startDate.format('YYYY-MM-DD');
+                    handleGenerateReport();
+                }
+            }
+            function handleGenerateReport() {
+                const startDate = document.getElementById('start-date').value;
+                const endDate = document.getElementById('end-date').value;
+                if (!startDate || !endDate) {
+                    showInfoModal('Lütfen bir başlangıç ve bitiş tarihi seçin.', 'Uyarı', 'error');
+                    return;
+                }
+                const filteredPurchases = appData.purchases.filter(p => {
+                    const purchaseDate = dayjs(p.purchaseDate);
+                    return purchaseDate.isAfter(dayjs(startDate).subtract(1, 'day')) && purchaseDate.isBefore(dayjs(endDate).add(1, 'day'));
+                });
 
-                let filtered = appData.purchases;
-                if (searchTerm) { filtered = filtered.filter(p => p.purchaseName.toLowerCase().includes(searchTerm)); }
-                if (category) { filtered = filtered.filter(p => p.category === category); }
-                listEl.innerHTML = filtered.length === 0 ? '<p class="text-sm text-slate-400 text-center py-4">Filtreye uygun harcama yok.</p>' : '';
-                const sorted = [...filtered].sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate));
-                sorted.forEach(p => {
+                const outputEl = document.getElementById('report-output');
+                if (filteredPurchases.length === 0) {
+                    outputEl.innerHTML = '<p class="text-center text-slate-400">Seçili tarih aralığında raporlanacak veri bulunamadı.</p>';
+                    return;
+                }
+
+                let total = 0;
+                let reportHTML = '<div class="space-y-4">';
+                filteredPurchases.forEach(p => {
                     const card = appData.cards.find(c => c.id === p.cardId);
-                    const el = document.createElement('div');
-                    el.className = 'flex justify-between items-center bg-slate-700 p-4 rounded-lg border border-slate-600';
-                    el.style.animation = 'fadeIn 0.5s';
-                    const recurringIcon = p.isRecurring ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block ml-2 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 12A8 8 0 1013 5.372" /></svg>` : '';
-                    el.innerHTML = `<div><p class="font-semibold text-white">${p.purchaseName}${recurringIcon}</p><p class="text-sm text-slate-300"><span class="font-medium" style="color:var(--primary-text-color);">${p.category || 'Diğer'}</span> - ${formatCurrency(p.totalAmount / p.installmentsCount)} x ${p.installmentsCount} Taksit</p><p class="text-xs text-slate-400">Tarih: ${dayjs(p.purchaseDate).format('DD.MM.YYYY')} | Kart: ${card ? card.cardName : 'Bilinmeyen'}</p></div><div class="flex items-center space-x-2"><button data-id="${p.id}" class="edit-purchase-btn text-sm bg-blue-900/50 text-blue-300 font-semibold px-3 py-1 rounded-md hover:bg-blue-800/50">Düzenle</button><button data-id="${p.id}" class="delete-purchase-btn text-sm bg-red-900/50 text-red-300 font-semibold px-3 py-1 rounded-md hover:bg-red-800/50">Sil</button></div>`;
-                    listEl.appendChild(el);
+                    total += parseFloat(p.totalAmount);
+                    reportHTML += `<div class="bg-slate-700 p-4 rounded-lg"><p class="font-semibold">${p.purchaseName}</p><p class="text-sm text-slate-300">${p.category || 'Diğer'} - ${formatCurrency(p.totalAmount)}</p><p class="text-xs text-slate-400">${dayjs(p.purchaseDate).format('DD.MM.YYYY')} - ${card?.cardName || 'Bilinmeyen'}</p></div>`;
                 });
+                reportHTML += `</div><div class="mt-6 text-right font-bold text-xl">Toplam Harcama: ${formatCurrency(total)}</div><div class="mt-4 flex justify-end"><button id="export-pdf-btn" class="bg-red-600 text-white py-2 px-4 rounded-md font-semibold">PDF İndir</button></div>`;
+                outputEl.innerHTML = reportHTML;
             }
-
-            function renderSubscriptions() {
-                const listEl = document.getElementById('subscription-list');
-                if (!listEl) return;
-                const subscriptions = appData.purchases.filter(p => p.isRecurring);
-                if (subscriptions.length === 0) { listEl.innerHTML = '<p class="text-sm text-slate-400 text-center py-4">Gösterilecek abonelik bulunmuyor.</p>'; return; }
-                listEl.innerHTML = '';
-                let monthlyTotal = 0;
-                subscriptions.forEach(p => {
-                    const card = appData.cards.find(c => c.id === p.cardId);
-                    const monthlyCost = parseFloat(p.totalAmount) / parseInt(p.installmentsCount);
-                    monthlyTotal += monthlyCost;
-                    const el = document.createElement('div');
-                    el.className = 'flex justify-between items-center bg-slate-700 p-4 rounded-lg border border-slate-600';
-                    el.style.animation = 'fadeIn 0.5s';
-                    el.innerHTML = `<div><p class="font-semibold text-white">${p.purchaseName}</p><p class="text-sm text-slate-300">${p.category || 'Diğer'}</p><p class="text-xs text-slate-400">Kart: ${card ? card.cardName : 'Bilinmeyen'}</p></div><div class="text-right"><p class="font-semibold text-lg text-white">${formatCurrency(monthlyCost)}</p><p class="text-xs text-slate-400">aylık</p></div>`;
-                    listEl.appendChild(el);
-                });
-                const summaryEl = document.createElement('div');
-                summaryEl.className = 'mt-6 pt-4 border-t border-slate-700 text-right';
-                summaryEl.innerHTML = `<p class="text-sm text-slate-300">Aylık Toplam Abonelik Gideri</p><p class="font-bold text-2xl text-white">${formatCurrency(monthlyTotal)}</p>`;
-                listEl.appendChild(summaryEl);
+            function handleExportPDF() {
+                const startDate = document.getElementById('start-date').value;
+                const endDate = document.getElementById('end-date').value;
+                const filtered = appData.purchases.filter(p => dayjs(p.purchaseDate).isAfter(dayjs(startDate).subtract(1, 'day')) && dayjs(p.purchaseDate).isBefore(dayjs(endDate).add(1, 'day')));
+                exportReportAsPDF(startDate, endDate, filtered);
             }
-
             function exportReportAsPDF(startDate, endDate, filteredPurchases) {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
                 doc.setFont('Helvetica', 'normal');
-                doc.setFontSize(18); doc.text("Harcama Raporu", 14, 22);
-                doc.setFontSize(11); doc.text(`Tarih Araligi: ${dayjs(startDate).format('DD.MM.YYYY')} - ${dayjs(endDate).format('DD.MM.YYYY')}`, 14, 30);
+                doc.setFontSize(18);
+                doc.text("Harcama Raporu", 14, 22);
+                doc.setFontSize(11);
+                doc.text(`Tarih Araligi: ${dayjs(startDate).format('DD.MM.YYYY')} - ${dayjs(endDate).format('DD.MM.YYYY')}`, 14, 30);
                 const tableColumn = ["Tarih", "Aciklama", "Kategori", "Kart", "Tutar (TL)"];
                 const tableRows = [];
                 let totalAmount = 0;
                 filteredPurchases.forEach(p => {
                     const card = appData.cards.find(c => c.id === p.cardId);
-                    tableRows.push([ dayjs(p.purchaseDate).format('DD.MM.YYYY'), p.purchaseName, p.category, card ? card.cardName : 'Bilinmiyor', parseFloat(p.totalAmount).toFixed(2) ]);
+                    const purchaseData = [ dayjs(p.purchaseDate).format('DD.MM.YYYY'), p.purchaseName, p.category || 'Diger', card ? card.cardName : 'Bilinmiyor', parseFloat(p.totalAmount).toFixed(2) ];
+                    tableRows.push(purchaseData);
                     totalAmount += parseFloat(p.totalAmount);
                 });
-                doc.autoTable({ head: [tableColumn], body: tableRows, startY: 35, theme: 'grid', headStyles: { fillColor: [109, 40, 217] }, styles: { font: 'Helvetica', fontStyle: 'normal' }, });
+                doc.autoTable({ head: [tableColumn], body: tableRows, startY: 35, theme: 'grid', headStyles: { fillColor: [109, 40, 217] }, });
                 const finalY = doc.lastAutoTable.finalY || 50;
-                doc.setFontSize(12); doc.text(`Toplam Harcama: ${totalAmount.toFixed(2)} TL`, 14, finalY + 15);
+                doc.setFontSize(12);
+                doc.text(`Toplam Harcama: ${totalAmount.toFixed(2)} TL`, 14, finalY + 15);
                 doc.save(`harcama-raporu-${dayjs().format('YYYY-MM-DD')}.pdf`);
                 showInfoModal('Raporunuz başarıyla PDF olarak indirildi.', 'Başarılı', 'success');
             }
 
-            function updateCardSelects() {
-                const selects = document.querySelectorAll('#card-select, #edit-card-select');
-                selects.forEach(select => {
-                    if (!select) return;
-                    const currentVal = select.value;
-                    select.innerHTML = '<option value="">Kart Seçin</option>';
-                    appData.cards.forEach(card => select.add(new Option(card.cardName, card.id)));
-                    if (appData.cards.find(c => c.id === currentVal)) select.value = currentVal;
-                });
-            }
-
-            function populateCategorySelects() {
-                const selects = document.querySelectorAll('#purchase-category, #edit-purchase-category, #filter-category');
-                selects.forEach(select => {
-                    if (!select) return;
-                    const isFilter = select.id === 'filter-category';
-                    select.innerHTML = `<option value="">${isFilter ? 'Tüm Kategoriler' : 'Kategori Seçin'}</option>`;
-                    CATEGORIES.forEach(cat => select.add(new Option(cat, cat)));
-                });
-            }
-
-            function calculatePayments() {
-                const payments = {};
-                appData.purchases.forEach(p => {
-                    const card = appData.cards.find(c => c.id === p.cardId);
-                    if (!card) return;
-                    const installment = parseFloat(p.totalAmount) / parseInt(p.installmentsCount);
-                    const firstDate = dayjs(p.purchaseDate).date() >= parseInt(card.statementDay) ? dayjs(p.purchaseDate).add(1, 'month').startOf('month') : dayjs(p.purchaseDate).startOf('month');
-                    for (let i = 0; i < p.installmentsCount; i++) {
-                        const key = firstDate.add(i, 'month').format('YYYY-MM');
-                        if (!payments[key]) payments[key] = { total: 0, unpaidTotal: 0 };
-                        if (!payments[key][p.cardId]) payments[key][p.cardId] = { amount: 0 };
-                        payments[key][p.cardId].amount += installment;
-                        payments[key].total += installment;
-                        if (!appData.paidMonths[`${key}_${p.cardId}`]) payments[key].unpaidTotal += installment;
-                    }
-                });
-                return payments;
-            }
-
-            function renderPaymentPlan() {
-                 const el = document.getElementById('payment-plan');
-                 if (!el) return;
-                 if (appData.purchases.length === 0) { el.innerHTML = `<p class="text-center text-slate-400 py-8">Görüntülenecek harcama bulunmuyor.</p>`; return; }
-                 const payments = calculatePayments();
-                 const months = Object.keys(payments).sort();
-                 if (months.length === 0) { el.innerHTML = `<p class="text-center text-slate-400 py-8">Hesaplanacak ödeme yok.</p>`; return; }
-                 const names = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
-                 let table = `<table class="min-w-full divide-y divide-slate-700"><thead class="bg-slate-800 sticky-header"><tr><th class="px-6 py-3 text-left text-xs uppercase sticky left-0 bg-slate-800 z-20">Kart Adı</th>`;
-                 months.forEach(key => table += `<th class="px-6 py-3 text-right text-xs uppercase">${names[parseInt(key.split('-')[1])-1]} ${key.split('-')[0]}</th>`);
-                 table += `</tr></thead><tbody class="bg-slate-900 divide-y divide-slate-700">`;
-                 appData.cards.forEach(card => {
-                     if (appData.purchases.some(p => p.cardId === card.id)) {
-                         table += `<tr><td class="px-6 py-4 font-medium sticky left-0 bg-slate-900 z-10 align-top">${card.cardName}</td>`;
-                         months.forEach(key => {
-                             const paymentData = (payments[key] && payments[key][card.id]) ? payments[key][card.id] : null;
-                             let cellContent = '-';
-                             if(paymentData && paymentData.amount > 0) {
-                                const paymentKey = `${key}_${card.id}`;
-                                const isPaid = appData.paidMonths[paymentKey];
-                                const amountHTML = `<p class="font-semibold text-right">${formatCurrency(paymentData.amount)}</p>`;
-                                let actionHTML = '';
-                                if(isPaid){
-                                    actionHTML = `<div class="mt-1 text-right"><span class="text-xs text-green-500 font-bold">ÖDENDİ ✓</span><button data-key="${paymentKey}" class="undo-pay-btn text-xs text-slate-500 hover:text-white ml-1">[Geri Al]</button></div>`;
-                                } else {
-                                    const statementDate = dayjs(`${key}-${String(card.statementDay).padStart(2, '0')}`);
-                                    const dueDate = statementDate.add(10, 'days');
-                                    const lateClass = dayjs().isAfter(dueDate) ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600';
-                                    actionHTML = `<div class="mt-1 text-right"><p class="text-xs text-slate-400 mb-1">Son Ödeme: ${dueDate.format('DD.MM')}</p><button data-key="${paymentKey}" class="pay-btn text-xs ${lateClass} text-white px-2 py-1 rounded-md w-full">Öde</button></div>`;
-                                }
-                                cellContent = `<div>${amountHTML}${actionHTML}</div>`;
-                             }
-                             table += `<td class="px-2 py-4 align-top">${cellContent}</td>`;
-                         });
-                         table += `</tr>`;
-                     }
-                 });
-                 table += `<tr class="bg-slate-800"><td class="px-6 py-4 font-bold sticky left-0 bg-slate-800 z-10">AYLIK KALAN ÖDEME</td>`;
-                 months.forEach(key => table += `<td class="px-6 py-4 text-right font-bold text-red-500">${formatCurrency(payments[key].unpaidTotal || 0)}</td>`);
-                 table += `</tr>`;
-                 table += '</tbody></table>';
-                 el.innerHTML = table;
-            }
-
-            function renderCategoryChart() {
-                const ctx = document.getElementById('categoryChart')?.getContext('2d');
-                if (!ctx) return;
-                
-                if (categoryChartInstance) categoryChartInstance.destroy();
-                
-                // YENİ: Gizlilik modunda grafik yerine mesaj göster
-                if(appData.privacyMode) {
-                    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-                    ctx.font = "16px Inter"; ctx.fillStyle = '#94a3b8'; ctx.textAlign = "center";
-                    ctx.fillText("Veriler Gizlilik Modu'nda gizlenmiştir.", ctx.canvas.width / 2, ctx.canvas.height / 2);
-                    return;
-                }
-
-                const categoryTotals = appData.purchases.reduce((acc, p) => { acc[p.category || 'Diğer'] = (acc[p.category || 'Diğer'] || 0) + parseFloat(p.totalAmount); return acc; }, {});
-                const labels = Object.keys(categoryTotals);
-                const data = Object.values(categoryTotals);
-
-                if (labels.length === 0) {
-                    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-                    ctx.font = "16px Inter"; ctx.fillStyle = '#94a3b8'; ctx.textAlign = "center";
-                    ctx.fillText("Gösterilecek harcama verisi yok.", ctx.canvas.width / 2, ctx.canvas.height / 2); return;
-                }
-                categoryChartInstance = new Chart(ctx, { type: 'pie', data: { labels, datasets: [{ label: 'Harcama Dağılımı', data, backgroundColor: ['#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef'], borderColor: '#1f2937', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: '#e2e8f0' } } } } });
-            }
-
-            function renderSummary() {
-                const summaryPanel = document.getElementById('summary-panel');
-                if (!summaryPanel) return;
-                let thisMonthPayment = 0, nextDueDateInfo = null, totalDebt = 0, nextStatementDateInfo = null;
-                const today = dayjs();
-                const currentMonthKey = today.format('YYYY-MM');
-
-                appData.purchases.forEach(p => {
-                    const card = appData.cards.find(c => c.id === p.cardId);
-                    if (!card) return;
-                    const installment = parseFloat(p.totalAmount) / parseInt(p.installmentsCount);
-                    const firstDate = dayjs(p.purchaseDate).date() >= parseInt(card.statementDay) ? dayjs(p.purchaseDate).add(1, 'month').startOf('month') : dayjs(p.purchaseDate).startOf('month');
-                    for (let i = 0; i < p.installmentsCount; i++) {
-                        const key = firstDate.add(i, 'month').format('YYYY-MM');
-                        const paymentKey = `${key}_${p.cardId}`;
-                        if (!appData.paidMonths[paymentKey]) {
-                            totalDebt += installment;
-                            const statementDate = dayjs(`${key}-${String(card.statementDay).padStart(2, '0')}`);
-                            const dueDate = statementDate.add(10, 'days');
-                            if(dueDate.format('YYYY-MM') === currentMonthKey) thisMonthPayment += installment;
-                            if(dueDate.isAfter(today) && (!nextDueDateInfo || dueDate.isBefore(nextDueDateInfo.date))) {
-                                nextDueDateInfo = { date: dueDate, cardName: card.cardName };
-                            }
-                        }
-                    }
-                });
-                
-                const payments = calculatePayments();
-                appData.cards.forEach(card => {
-                    const statementDay = parseInt(card.statementDay);
-                    if (isNaN(statementDay)) return;
-                    let hasAnyFutureUnpaidInstallments = false;
-                    for (let i = 0; i < 24; i++) {
-                        const futureMonthKey = today.add(i, 'month').format('YYYY-MM');
-                        const paymentCheckKey = `${futureMonthKey}_${card.id}`;
-                        if (payments[futureMonthKey] && payments[futureMonthKey][card.id] && !appData.paidMonths[paymentCheckKey]) {
-                            hasAnyFutureUnpaidInstallments = true;
-                            break;
-                        }
-                    }
-                    if (hasAnyFutureUnpaidInstallments) {
-                        let nextStatementDate = today.date(statementDay);
-                        if (today.date() >= statementDay) {
-                            nextStatementDate = nextStatementDate.add(1, 'month');
-                        }
-                        if (!nextStatementDateInfo || nextStatementDate.isBefore(nextStatementDateInfo.date)) {
-                            nextStatementDateInfo = { date: nextStatementDate, cardName: card.cardName };
-                        }
-                    }
-                });
-
-                summaryPanel.innerHTML = `<h2 class="text-xl font-bold mb-4">Durum Özeti</h2>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                    <div><p class="text-sm opacity-80">Bu Ay Kalan Ödeme</p><p class="text-2xl font-bold">${formatCurrency(thisMonthPayment)}</p></div>
-                    <div><p class="text-sm opacity-80">En Yakın Son Ödeme</p><p class="text-2xl font-bold">${nextDueDateInfo ? nextDueDateInfo.date.format('DD.MM.YYYY') : '-'}</p><p class="text-xs opacity-80">${nextDueDateInfo ? nextDueDateInfo.cardName : ''}</p></div>
-                    <div><p class="text-sm opacity-80">En Yakın Kesim Tarihi</p><p class="text-2xl font-bold">${nextStatementDateInfo ? nextStatementDateInfo.date.format('DD.MM.YYYY') : '-'}</p><p class="text-xs opacity-80">${nextStatementDateInfo ? nextStatementDateInfo.cardName : ''}</p></div>
-                    <div><p class="text-sm opacity-80">Toplam Kalan Borç</p><p class="text-2xl font-bold">${formatCurrency(totalDebt)}</p></div>
-                </div>`;
-            }
 
             // --- OLAY İŞLEYİCİLER ---
-            function handleEditCardSubmit(e) { e.preventDefault(); const id = e.target.elements['edit-card-id'].value; const index = appData.cards.findIndex(c => c.id === id); if (index === -1) return; appData.cards[index] = { ...appData.cards[index], cardName: e.target.elements['edit-card-name'].value, statementDay: parseInt(e.target.elements['edit-statement-day'].value), cardLimit: parseFloat(e.target.elements['edit-card-limit'].value) }; saveData(); refreshUI(); closeEditCardModal(); }
-            function handleEditPurchaseSubmit(e) { e.preventDefault(); const id = e.target.elements['edit-purchase-id'].value; const index = appData.purchases.findIndex(p => p.id === id); if(index === -1) return; appData.purchases[index] = { ...appData.purchases[index], purchaseName: e.target.elements['edit-purchase-name'].value, purchaseDate: e.target.elements['edit-purchase-date'].value, totalAmount: e.target.elements['edit-total-amount'].value, installmentsCount: e.target.elements['edit-installments-count'].value, cardId: e.target.elements['edit-card-select'].value, category: e.target.elements['edit-purchase-category'].value, isRecurring: e.target.elements['edit-purchase-recurring'].checked }; saveData(); refreshUI(); closeEditPurchaseModal(); }
-
-            function bindEventListeners() {
-                // Navigasyon
-                document.getElementById('bottom-nav').addEventListener('click', (e) => {
-                    const clickedBtn = e.target.closest('.bottom-nav-btn');
-                    if (!clickedBtn) return;
-                    document.querySelectorAll('.bottom-nav-btn').forEach(btn => btn.classList.remove('active'));
-                    clickedBtn.classList.add('active');
-                    document.querySelectorAll('.main-panel').forEach(panel => panel.classList.remove('active'));
-                    const panelId = `panel-${clickedBtn.dataset.panel}`;
-                    document.getElementById(panelId).classList.add('active');
-                });
-
-                // Formlar ve Filtreler
-                document.body.addEventListener('submit', e => {
-                    if (e.target.id === 'add-card-form') { e.preventDefault(); appData.cards.push({ id: crypto.randomUUID(), cardName: e.target.elements['card-name'].value, statementDay: parseInt(e.target.elements['statement-day'].value), cardLimit: parseFloat(e.target.elements['card-limit'].value) }); saveData(); refreshUI(); e.target.reset(); }
-                    if (e.target.id === 'add-purchase-form') { e.preventDefault(); const form = e.target.elements; appData.purchases.push({ id: crypto.randomUUID(), purchaseName: form['purchase-name'].value, purchaseDate: form['purchase-date'].value, totalAmount: form['total-amount'].value, installmentsCount: form['installments-count'].value, cardId: form['card-select'].value, category: form['purchase-category'].value, isRecurring: form['purchase-recurring'].checked }); saveData(); refreshUI(); e.target.reset(); document.getElementById('purchase-date').valueAsDate = new Date(); }
-                });
-                document.body.addEventListener('input', e => {
-                    if (e.target.id === 'search-input') renderPurchasesList();
-                    if (e.target.id === 'custom-theme-picker') { applyCustomTheme(e.target.value); saveData(); }
-                });
-                document.body.addEventListener('change', e => {
-                    if (e.target.id === 'filter-category') renderPurchasesList();
-                    if (e.target.id === 'import-data-input') { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (re) => { try { const importedData = JSON.parse(re.target.result); if (importedData && typeof importedData === 'object') { showConfirmModal('Mevcut tüm verileriniz bu yedekle değiştirilecek. Onaylıyor musunuz?', 'Veri Geri Yükleme', () => { appData = { ...DEFAULTS, ...importedData }; saveData(); window.location.reload(); }); } } catch (error) { showInfoModal('Geçersiz dosya formatı.', 'Hata', 'error'); } }; reader.readAsText(file); e.target.value = ''; }
-                    // YENİ: Gizlilik modu toggle
-                    if (e.target.id === 'privacy-mode-toggle') { appData.privacyMode = e.target.checked; saveData(); refreshUI(); }
-                });
-
-                // Diğer Butonlar
-                document.body.addEventListener('click', e => {
-                    const btn = e.target.closest('button');
-                    if (!btn) return;
-                    if (btn.closest('#theme-selector')) { if (btn.dataset.theme !== undefined) { applyTheme(btn.dataset.theme); saveData(); } return; }
-
-                    if (btn.matches('.quick-range-btn')) {
-                        const range = btn.dataset.range;
-                        const endDateInput = document.getElementById('end-date'); const startDateInput = document.getElementById('start-date'); const generateBtn = document.getElementById('generate-report-btn');
-                        if (!endDateInput || !startDateInput || !generateBtn) return;
-                        const today = dayjs(); endDateInput.value = today.format('YYYY-MM-DD');
-                        let startDate;
-                        if (range === 'week') startDate = today.subtract(7, 'day'); else if (range === 'month') startDate = today.subtract(1, 'month'); else if (range === 'year') startDate = today.subtract(1, 'year');
-                        if (startDate) { startDateInput.value = startDate.format('YYYY-MM-DD'); generateBtn.click(); } return;
-                    }
-                    if (btn.id === 'generate-report-btn') {
-                        const startDate = document.getElementById('start-date').value, endDate = document.getElementById('end-date').value;
-                        if (!startDate || !endDate) { showInfoModal('Lütfen tarih aralığı seçin.', 'Uyarı', 'error'); return; }
-                        const filtered = appData.purchases.filter(p => dayjs(p.purchaseDate).isAfter(dayjs(startDate).subtract(1, 'day')) && dayjs(p.purchaseDate).isBefore(dayjs(endDate).add(1, 'day')));
-                        const outputEl = document.getElementById('report-output'); if(!outputEl) return;
-                        if(filtered.length === 0){ outputEl.innerHTML = '<p class="text-center text-slate-400">Raporlanacak veri bulunamadı.</p>'; return; }
-                        let total = 0; let reportHTML = '<div class="space-y-4">';
-                        filtered.forEach(p => { const card = appData.cards.find(c => c.id === p.cardId); total += parseFloat(p.totalAmount); reportHTML += `<div class="bg-slate-700 p-4 rounded-lg"><p class="font-semibold">${p.purchaseName}</p><p class="text-sm text-slate-300">${p.category || 'Diğer'} - ${formatCurrency(p.totalAmount)}</p><p class="text-xs text-slate-400">${dayjs(p.purchaseDate).format('DD.MM.YYYY')} - ${card?.cardName || ''}</p></div>`; });
-                        reportHTML += `</div><div class="mt-6 text-right font-bold text-xl">Toplam: ${formatCurrency(total)}</div><div class="mt-4 flex justify-end"><button id="export-pdf-btn" class="bg-red-600 text-white py-2 px-4 rounded-md font-semibold">PDF İndir</button></div>`;
-                        outputEl.innerHTML = reportHTML; return;
-                    }
-                    if (btn.id === 'export-pdf-btn') { const startDate = document.getElementById('start-date').value, endDate = document.getElementById('end-date').value; const filtered = appData.purchases.filter(p => dayjs(p.purchaseDate).isAfter(dayjs(startDate).subtract(1, 'day')) && dayjs(p.purchaseDate).isBefore(dayjs(endDate).add(1, 'day'))); exportReportAsPDF(startDate, endDate, filtered); return; }
-                    if (btn.id === 'export-data-btn') { const dataStr = JSON.stringify(appData); const blob = new Blob([dataStr], {type: "application/json"}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `taksit-asistani-yedek-${dayjs().format('YYYY-MM-DD')}.json`; a.click(); URL.revokeObjectURL(url); showInfoModal('Veriler başarıyla yedeklendi.', 'Başarılı', 'success'); return; }
-                    
-                    // YENİ: Tüm verileri silme butonu
-                    if (btn.id === 'delete-all-data-btn') {
-                        showConfirmModal('<b>Bu işlem KESİNLİKLE GERİ ALINAMAZ.</b><br><br>Tüm kart, harcama ve ayar verileriniz kalıcı olarak silinecektir. Devam etmek istediğinizden emin misiniz?', 'Tüm Verileri Sil', () => {
-                           localStorage.removeItem(STORAGE_KEY);
-                           window.location.reload();
-                        });
-                        return;
-                    }
-
-                    const id = btn.dataset.id, key = btn.dataset.key;
-                    if (btn.matches('.delete-card-btn')) openDeleteModal(id, 'card', appData.cards.find(c=>c.id===id).cardName, btn.closest('.bg-slate-700'));
-                    if (btn.matches('.delete-purchase-btn')) openDeleteModal(id, 'purchase', appData.purchases.find(p=>p.id===id).purchaseName, btn.closest('.bg-slate-700'));
-                    if (btn.matches('.edit-card-btn')) openEditCardModal(id);
-                    if (btn.matches('.edit-purchase-btn')) openEditPurchaseModal(id);
-                    if (btn.matches('.pay-btn')) { appData.paidMonths[key] = true; saveData(); refreshUI(); }
-                    if (btn.matches('.undo-pay-btn')) { delete appData.paidMonths[key]; saveData(); refreshUI(); }
-                    if (btn.id === 'cancel-delete-btn') closeDeleteModal();
-                    if (btn.id === 'confirm-delete-btn') {
-                        if(itemToDelete.element) itemToDelete.element.classList.add('item-fade-out');
-                        setTimeout(() => {
-                            if (itemToDelete.type === 'card') { Object.keys(appData.paidMonths).forEach(key => { if (key.endsWith(`_${itemToDelete.id}`)) delete appData.paidMonths[key]; }); appData.purchases = appData.purchases.filter(p => p.cardId !== itemToDelete.id); appData.cards = appData.cards.filter(c => c.id !== itemToDelete.id); }
-                            else { appData.purchases = appData.purchases.filter(p => p.id !== itemToDelete.id); }
-                            saveData(); refreshUI(); closeDeleteModal();
-                        }, 300);
-                    }
-                });
+            function handleFormSubmits(e) {
+                if (e.target.id === 'add-purchase-form') { 
+                    e.preventDefault();
+                    const form = e.target.elements;
+                    const newPurchase = {
+                        id: crypto.randomUUID(),
+                        purchaseName: form['purchase-name'].value,
+                        purchaseDate: form['purchase-date'].value,
+                        totalAmount: form['total-amount'].value,
+                        installmentsCount: form['installments-count'].value,
+                        cardId: form['card-select'].value,
+                        category: form['purchase-category'].value,
+                        isRecurring: form['purchase-recurring'].checked
+                    };
+                    selectedPlanMonth = getFirstPaymentMonthKey(newPurchase);
+                    appData.purchases.push(newPurchase);
+                    saveData();
+                    refreshUI();
+                    e.target.reset();
+                    el.purchaseDateInput.valueAsDate = new Date();
+                    showInfoModal('Harcama başarıyla eklendi.', 'Başarılı', 'success');
+                    return;
+                }
+                if (e.target.id === 'add-card-form') { e.preventDefault(); const form = e.target.elements; appData.cards.push({ id: crypto.randomUUID(), cardName: form['card-name'].value, statementDay: parseInt(form['statement-day'].value), cardLimit: parseFloat(form['card-limit'].value) }); saveData(); refreshUI(); e.target.reset(); }
+                if (e.target.id === 'edit-card-form') { e.preventDefault(); const form = e.target.elements; const index = appData.cards.findIndex(c => c.id === form['edit-card-id'].value); if (index !== -1) { appData.cards[index] = { ...appData.cards[index], cardName: form['edit-card-name'].value, statementDay: parseInt(form['edit-statement-day'].value), cardLimit: parseFloat(form['edit-card-limit'].value) }; saveData(); refreshUI(); closeEditCardModal(); } } 
+                if (e.target.id === 'edit-purchase-form') { e.preventDefault(); const form = e.target.elements; const index = appData.purchases.findIndex(p => p.id === form['edit-purchase-id'].value); if(index !== -1) { appData.purchases[index] = { ...appData.purchases[index], purchaseName: form['edit-purchase-name'].value, purchaseDate: form['edit-purchase-date'].value, totalAmount: form['edit-total-amount'].value, installmentsCount: form['edit-installments-count'].value, cardId: form['edit-card-select'].value, category: form['edit-purchase-category'].value, isRecurring: form['edit-purchase-recurring'].checked }; saveData(); refreshUI(); closeEditPurchaseModal(); } }
             }
+            function bindEventListeners() {
+                document.body.addEventListener('submit', handleFormSubmits);
+                document.body.addEventListener('input', e => { if (e.target.id === 'search-input') renderPurchasesList(); if (e.target.id === 'custom-theme-picker') { applyCustomTheme(e.target.value); saveData(); } });
+                document.body.addEventListener('change', e => { if (e.target.id === 'filter-category') renderPurchasesList(); if (e.target.id === 'import-data-input') handleImportData(e); if (e.target.id === 'privacy-mode-toggle') { appData.privacyMode = e.target.checked; saveData(); refreshUI(); } if (e.target.id === 'plan-month-selector') { selectedPlanMonth = e.target.value; renderPaymentPlan(calculatePaymentSchedule(), selectedPlanMonth); } });
+                document.body.addEventListener('click', handleBodyClicks);
+            }
+            function handleBodyClicks(e) {
+                const btn = e.target.closest('button');
+                if (!btn) return;
+                const id = btn.dataset.id, key = btn.dataset.key;
+                
+                if (btn.matches('.pay-btn')) { appData.paidMonths[key] = { paidDate: dayjs().toISOString() }; selectedPlanMonth = findFirstUnpaidMonth(calculatePaymentSchedule()); saveData(); refreshUI(); return; }
+                if (btn.matches('.undo-pay-btn')) { delete appData.paidMonths[key]; selectedPlanMonth = findFirstUnpaidMonth(calculatePaymentSchedule()); saveData(); refreshUI(); return; }
+                if (btn.id === 'history-prev-btn') { if(historyCurrentPage > 1) { historyCurrentPage--; renderHistory(calculatePaymentSchedule()); } return; }
+                if (btn.id === 'history-next-btn') { historyCurrentPage++; renderHistory(calculatePaymentSchedule()); return; }
+
+                if (btn.closest('#bottom-nav')) { document.querySelectorAll('.bottom-nav-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); document.querySelectorAll('.main-panel').forEach(p => p.classList.remove('active')); document.getElementById(`panel-${btn.dataset.panel}`).classList.add('active'); return; } 
+                if (btn.closest('#theme-selector')) { if (btn.dataset.theme !== undefined) { applyTheme(btn.dataset.theme); saveData(); } return; } 
+                if (btn.matches('.quick-range-btn')) { handleQuickReportRange(btn.dataset.range); return; } 
+                if (btn.id === 'generate-report-btn') { handleGenerateReport(); return; } 
+                if (btn.id === 'export-pdf-btn') { handleExportPDF(); return; } 
+                if (btn.id === 'export-data-btn') { handleExportData(); return; } 
+                if (btn.id === 'delete-all-data-btn') { handleDeleteAllData(); return; } 
+                if (btn.id === 'cancel-delete-btn') closeDeleteModal(); 
+                if (btn.id === 'confirm-delete-btn') { handleConfirmDelete(); return; } 
+                if (btn.matches('.delete-card-btn')) { const card = appData.cards.find(c => c.id === id); openDeleteModal(id, 'card', card.cardName, btn.closest('.bg-slate-700')); return; } 
+                if (btn.matches('.delete-purchase-btn')) { const purchase = appData.purchases.find(p => p.id === id); openDeleteModal(id, 'purchase', purchase.purchaseName, btn.closest('.flex')); return; } 
+                if (btn.matches('.edit-card-btn')) { openEditCardModal(id); return; } 
+                if (btn.matches('.edit-purchase-btn') || btn.matches('.edit-subscription-btn')) { openEditPurchaseModal(id); return; } 
+                if (btn.matches('.cancel-subscription-btn')) { handleCancelSubscription(id); return; } 
+                if (btn.id === 'enable-notifications-btn') { handleNotificationPermission(); return; } 
+            }
+            function handleExportData() { const dataStr = JSON.stringify(appData); const blob = new Blob([dataStr], {type: "application/json"}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `taksit-asistani-yedek-${dayjs().format('YYYY-MM-DD')}.json`; a.click(); URL.revokeObjectURL(url); showInfoModal('Veriler başarıyla yedeklendi.', 'Başarılı', 'success'); }
+            function handleImportData(e) { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (re) => { try { const importedData = JSON.parse(re.target.result); showConfirmModal('Mevcut tüm verileriniz bu yedekle değiştirilecek. Onaylıyor musunuz?', 'Veri Geri Yükleme', () => { appData = { ...DEFAULTS, ...importedData }; saveData(); window.location.reload(); }); } catch (error) { showInfoModal('Geçersiz dosya formatı.', 'Hata', 'error'); } }; reader.readAsText(file); e.target.value = ''; }
+            function handleDeleteAllData() { showConfirmModal('<b>Bu işlem KESİNLİKLE GERİ ALINAMAZ.</b><br><br>Tüm kart, harcama ve ayar verileriniz kalıcı olarak silinecektir. Devam etmek istediğinizden emin misiniz?', 'Tüm Verileri Sil', () => { localStorage.removeItem(STORAGE_KEY); window.location.reload(); }, 'EVET, TÜMÜNÜ SİL'); }
+            function handleConfirmDelete() { if(itemToDelete.element) itemToDelete.element.classList.add('item-fade-out'); setTimeout(() => { if (itemToDelete.type === 'card') { appData.purchases = appData.purchases.filter(p => p.cardId !== itemToDelete.id); appData.cards = appData.cards.filter(c => c.id !== itemToDelete.id); Object.keys(appData.paidMonths).forEach(key => { if (key.endsWith(`_${itemToDelete.id}`)) delete appData.paidMonths[key]; }); } else if(itemToDelete.type === 'purchase') { appData.purchases = appData.purchases.filter(p => p.id !== itemToDelete.id); } else if(itemToDelete.callback) { itemToDelete.callback(); } saveData(); refreshUI(); closeDeleteModal(); }, 300); }
+            function handleCancelSubscription(id) { const purchase = appData.purchases.find(p => p.id === id); if(!purchase) return; showConfirmModal(`"${purchase.purchaseName}" aboneliğini iptal etmek istediğinize emin misiniz? Bu işlem harcamayı silmez, sadece tekrarlama özelliğini kapatır.`, 'Abonelik İptali', () => { purchase.isRecurring = false; saveData(); refreshUI(); }); }
+            
+            // --- BİLDİRİM YÖNETİMİ ---
+            function updateNotificationsUI() { if (!('Notification' in window) || !('serviceWorker' in navigator)) { el.notificationsLabel.textContent = 'Bildirimler Desteklenmiyor'; el.notificationsBtn.disabled = true; return; } if (appData.notificationPermission === 'granted') { el.notificationsLabel.textContent = 'Bildirimlere İzin Verildi'; el.notificationsBtn.textContent = 'İzin Verildi'; el.notificationsBtn.disabled = true; } else if (appData.notificationPermission === 'denied') { el.notificationsLabel.textContent = 'Bildirimler Engellendi'; el.notificationsBtn.textContent = 'Engellendi'; el.notificationsBtn.disabled = true; } }
+            async function handleNotificationPermission() { const permission = await Notification.requestPermission(); appData.notificationPermission = permission; saveData(); updateNotificationsUI(); if (permission === 'granted') { showInfoModal('Bildirimlere başarıyla izin verdiniz!', 'Başarılı', 'success'); checkAndScheduleReminders(calculatePaymentSchedule()); } else { showInfoModal('Bildirimlere izin vermediniz. Ayarlardan değiştirebilirsiniz.', 'Bilgi'); } }
+            async function checkAndScheduleReminders(schedule) { if (appData.notificationPermission !== 'granted') return; const swReg = await navigator.serviceWorker.ready; const today = dayjs(); Object.entries(schedule).forEach(([monthKey, monthData]) => { Object.entries(monthData.details).forEach(([cardId, cardData]) => { const dueDate = dayjs(cardData.dueDate); const reminderDate = dueDate.subtract(2, 'days'); const paymentKey = `${monthKey}_${cardId}`; const reminderId = `reminder_${paymentKey}`; if (today.isSameOrBefore(reminderDate) && !appData.paidMonths[paymentKey] && !appData.scheduledReminders[reminderId]) { const card = appData.cards.find(c => c.id === cardId); if(!card) return; const title = 'Ödeme Hatırlatıcısı'; const options = { body: `${card.cardName} kartınızın ${formatCurrency(cardData.amount)} tutarındaki ödemesinin son günü yaklaşıyor! (${dueDate.format('DD.MM.YYYY')})`, icon: 'https://placehold.co/192x192/6d28d9/ffffff?text=MAK', tag: reminderId }; try { swReg.showNotification(title, options); appData.scheduledReminders[reminderId] = true; } catch (e) { console.error("Bildirim gösterme hatası:", e); } } }); }); saveData(); }
 
             // --- BAŞLANGIÇ ---
             function init() {
-                loadData();
-                refreshUI();
-                bindEventListeners();
-                checkOnboarding();
-                document.getElementById('purchase-date').valueAsDate = new Date();
-                const customColorPicker = document.getElementById('custom-theme-picker');
-                if (appData.customThemeColor) {
-                    customColorPicker.value = appData.customThemeColor;
+                if ('serviceWorker' in navigator) {
+                    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(reg => console.log('Service Worker registered.')).catch(err => console.log('Service Worker registration failed:', err)); });
                 }
+                
+                loadData();
+                bindEventListeners();
+                selectedPlanMonth = null; 
+                refreshUI();
+                checkOnboarding();
+                el.purchaseDateInput.valueAsDate = new Date();
+                document.getElementById('custom-theme-picker').value = appData.customThemeColor || '#6d28d9';
             }
 
             init();
